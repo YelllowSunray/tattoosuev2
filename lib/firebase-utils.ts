@@ -30,7 +30,7 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
         if (result.items.length > 0) {
           console.log(`Found ${result.items.length} images in Firebase Storage at path: ${normalizedPath}`);
           
-          const imagePromises = result.items.map(async (itemRef) => {
+          const imagePromises: Promise<TattooImage | null>[] = result.items.map(async (itemRef) => {
             try {
               const url = await getDownloadURL(itemRef);
               const fileName = itemRef.name;
@@ -42,7 +42,7 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
               // Match style to category
               const match = matchStyleToCategory(style || '');
               
-              return {
+              const image: TattooImage = {
                 url,
                 style: style || '',
                 bodyPart,
@@ -50,6 +50,8 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
                 category: match?.category,
                 matchedStyle: match?.style,
               };
+              
+              return image;
             } catch (error) {
               console.error(`Error processing image ${itemRef.name}:`, error);
               return null;
