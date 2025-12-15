@@ -41,47 +41,52 @@ async function getAccessToken(): Promise<string> {
 
 async function generateBananaImages(prompt: string): Promise<string[]> {
   const accessToken = await getAccessToken();
-
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${BANANA_VERTEX_MODEL_ID}:generateContent`;
 
-  const body = {
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: prompt }],
-      },
-    ],
-    // Minimal generationConfig; you can extend this if needed.
-    // For image-capable Gemini models, image data should appear in inlineData parts.
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(
-      `Gemini (NanoBanana) generation failed: ${res.status} ${res.statusText} – ${errorText}`
-    );
-  }
-
-  const data = await res.json();
-  const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
-
   const images: string[] = [];
-  for (const c of candidates) {
-    const parts = c?.content?.parts || [];
-    for (const p of parts) {
-      if (p?.inlineData?.data) {
-        const mime = p.inlineData.mimeType || "image/png";
-        images.push(`data:${mime};base64,${p.inlineData.data}`);
+
+  // Call the API 4 times sequentially to get 4 images
+  for (let i = 0; i < 4; i++) {
+    const body = {
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: prompt }],
+        },
+      ],
+    };
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(
+        `Gemini (NanoBanana) generation failed: ${res.status} ${res.statusText} – ${errorText}`
+      );
+    }
+
+    const data = await res.json();
+    const candidates = Array.isArray(data?.candidates) ? data.candidates : [];
+
+    let added = false;
+    for (const c of candidates) {
+      const parts = c?.content?.parts || [];
+      for (const p of parts) {
+        if (p?.inlineData?.data) {
+          const mime = p.inlineData.mimeType || "image/png";
+          images.push(`data:${mime};base64,${p.inlineData.data}`);
+          added = true;
+          break;
+        }
       }
+      if (added) break;
     }
   }
 
