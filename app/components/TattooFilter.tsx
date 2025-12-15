@@ -46,6 +46,38 @@ export default function TattooFilter({
 
   return (
     <div className="space-y-6 max-h-full">
+      {/* Body Part Selection */}
+      <div>
+        <label className="block text-xs text-white/40 mb-3 uppercase tracking-[0.15em] font-light">
+          Placement
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => onBodyPartChange(undefined)}
+            className={`px-4 py-2 text-sm font-light transition-all duration-200 ${
+              !selectedBodyPart
+                ? 'bg-white text-black border border-white/20'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20 hover:text-white/80'
+            }`}
+          >
+            All
+          </button>
+          {bodyParts.map((bodyPart) => (
+            <button
+              key={bodyPart}
+              onClick={() => onBodyPartChange(bodyPart === selectedBodyPart ? undefined : bodyPart)}
+              className={`px-4 py-2 text-sm font-light transition-all duration-200 capitalize ${
+                selectedBodyPart === bodyPart
+                  ? 'bg-white text-black border border-white/20'
+                  : 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20 hover:text-white/80'
+              }`}
+            >
+              {bodyPart}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Category Selection */}
       <div>
         <label className="block text-xs text-white/40 mb-3 uppercase tracking-[0.15em] font-light">
@@ -136,38 +168,6 @@ export default function TattooFilter({
               </div>
             );
           })}
-        </div>
-      </div>
-
-      {/* Body Part Selection */}
-      <div>
-        <label className="block text-xs text-white/40 mb-3 uppercase tracking-[0.15em] font-light">
-          Placement
-        </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onBodyPartChange(undefined)}
-            className={`px-4 py-2 text-sm font-light transition-all duration-200 ${
-              !selectedBodyPart
-                ? 'bg-white text-black border border-white/20'
-                : 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20 hover:text-white/80'
-            }`}
-          >
-            All
-          </button>
-          {bodyParts.map((bodyPart) => (
-            <button
-              key={bodyPart}
-              onClick={() => onBodyPartChange(bodyPart === selectedBodyPart ? undefined : bodyPart)}
-              className={`px-4 py-2 text-sm font-light transition-all duration-200 capitalize ${
-                selectedBodyPart === bodyPart
-                  ? 'bg-white text-black border border-white/20'
-                  : 'bg-white/5 text-white/60 border border-white/10 hover:border-white/20 hover:text-white/80'
-              }`}
-            >
-              {bodyPart}
-            </button>
-          ))}
         </div>
       </div>
     </div>
