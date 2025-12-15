@@ -1,6 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { TATTOO_CATEGORIES } from "@/lib/tattoo-categories";
+import { storage } from "@/lib/firebase";
+import { ref, uploadString } from "firebase/storage";
+
+const PLACEMENTS = [
+  "Arm",
+  "Shoulder",
+  "Chest",
+  "Abdominal",
+  "Back",
+  "Ribs",
+  "Leg",
+  "Hand",
+  "Neck",
+  "Face",
+];
 
 const MODELS = [
   { id: "imagen4", label: "Imagen 4" },
@@ -14,6 +31,36 @@ export default function GeneratePage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultText, setResultText] = useState("");
   const [images, setImages] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [selectedStyleId, setSelectedStyleId] = useState(null);
+  const [selectedPlacement, setSelectedPlacement] = useState(null);
+  const [portraitFileName, setPortraitFileName] = useState("");
+  const [portraitBase64, setPortraitBase64] = useState(null);
+
+  const handlePortraitChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setPortraitBase64(null);
+      setPortraitFileName("");
+      return;
+    }
+    setPortraitFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result;
+      if (typeof result === "string" && result.startsWith("data:")) {
+        // Strip "data:mime;base64," prefix to send clean base64
+        const base64 = result.split(",")[1];
+        setPortraitBase64({
+          data: base64,
+          mimeType: file.type || "image/png",
+        });
+      } else {
+        setPortraitBase64(null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -31,10 +78,55 @@ export default function GeneratePage() {
           ? "/api/generate-image"
           : "/api/generate-banana";
 
+      // Build an enriched prompt using selected style and placement
+      let fullPrompt = prompt.trim();
+      const extraParts = [];
+
+      const category =
+        typeof selectedCategoryId === "number"
+          ? TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId)
+          : null;
+      const style =
+        category && typeof selectedStyleId === "number"
+          ? category.styles.find((s) => s.id === selectedStyleId)
+          : null;
+
+      if (style) {
+        extraParts.push(`${style.name} tattoo style`);
+      } else if (category) {
+        extraParts.push(`${category.name} tattoo style`);
+      }
+
+      if (selectedPlacement) {
+        extraParts.push(
+          `placement on the ${selectedPlacement.toLowerCase()}`
+        );
+      }
+
+      if (extraParts.length > 0) {
+        fullPrompt = `${fullPrompt}\n\nStyle / placement: ${extraParts.join(
+          ", "
+        )}`;
+      }
+
+      const body = {
+        prompt: fullPrompt,
+        model: selectedModel,
+      };
+
+      // Only send portrait reference when using NanoBanana / Gemini models
+      if (
+        (selectedModel === "nanobanana" || selectedModel === "gemini25") &&
+        portraitBase64
+      ) {
+        body.referenceImage = portraitBase64.data;
+        body.referenceImageMimeType = portraitBase64.mimeType;
+      }
+
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), model: selectedModel }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -47,6 +139,17 @@ export default function GeneratePage() {
       if (Array.isArray(data.images) && data.images.length > 0) {
         setImages(data.images);
         setResultText(`Generated ${data.images.length} image(s) with ${selectedModel}.`);
+
+        // Fire-and-forget save to Firebase Storage under generated/
+        const timestamp = Date.now();
+        data.images.forEach((img, idx) => {
+          if (typeof img !== "string" || !img.startsWith("data:")) return;
+          const path = `generated/${timestamp}-${idx}.png`;
+          const storageRef = ref(storage, path);
+          uploadString(storageRef, img, "data_url").catch((err) => {
+            console.error("Failed to save generated image to Firebase:", err);
+          });
+        });
       } else {
         setResultText("No image returned from the server.");
       }
@@ -58,18 +161,100 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-3xl border border-white/10 bg-black/70 p-6 sm:p-8 space-y-6">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
-            Generate Tattoo Design
-          </h1>
-          <p className="text-xs sm:text-sm text-white/60">
-            Choose a model and describe the tattoo you want. This page is wired
-            up for UI only – you can connect Imagen 4, NanoBanana, or Gemini
-            2.5 APIs in the generate handler.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
+              Generate Tattoo Design
+            </h1>
+            <p className="text-xs sm:text-sm text-white/60">
+              Choose a model and describe the tattoo you want. This page is
+              wired up for different AI models to help you explore tattoo
+              ideas.
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+          >
+            ← Back to gallery
+          </Link>
         </div>
 
-        <form onSubmit={handleGenerate} className="space-y-5">
+        <form onSubmit={handleGenerate} className="space-y-6">
+          {/* Placement selection */}
+          <div className="space-y-2">
+            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+              Placement (optional)
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PLACEMENTS.map((place) => (
+                <button
+                  key={place}
+                  type="button"
+                  onClick={() =>
+                    setSelectedPlacement(
+                      selectedPlacement === place ? null : place
+                    )
+                  }
+                  className={`px-3 py-1.5 text-xs border transition-colors capitalize ${
+                    selectedPlacement === place
+                      ? "bg-white text-black border-white"
+                      : "bg-transparent text-white/70 border-white/30 hover:border-white/60"
+                  }`}
+                >
+                  {place}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category + style selection */}
+          <div className="space-y-2">
+            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+              Style (optional)
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <select
+                value={selectedCategoryId ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedCategoryId(val ? Number(val) : null);
+                  setSelectedStyleId(null);
+                }}
+                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+              >
+                <option value="">All categories</option>
+                {TATTOO_CATEGORIES.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={selectedStyleId ?? ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedStyleId(val ? Number(val) : null);
+                }}
+                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                disabled={!selectedCategoryId}
+              >
+                <option value="">
+                  {selectedCategoryId ? "All styles in category" : "Select a category first"}
+                </option>
+                {selectedCategoryId &&
+                  TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId)?.styles.map(
+                    (style) => (
+                      <option key={style.id} value={style.id}>
+                        {style.name}
+                      </option>
+                    )
+                  )}
+              </select>
+            </div>
+          </div>
+
           {/* Model picker */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
@@ -92,6 +277,42 @@ export default function GeneratePage() {
               ))}
             </div>
           </div>
+
+          {/* Portrait reference upload (NanoBanana / Gemini only) */}
+          {(selectedModel === "nanobanana" || selectedModel === "gemini25") && (
+            <div className="space-y-2">
+              <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+                Portrait reference (optional)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePortraitChange}
+                className="block w-full text-xs text-white/70 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-black hover:file:bg-zinc-200"
+              />
+              {portraitFileName && (
+                <div className="flex items-center gap-3 mt-2">
+                  {portraitBase64 && (
+                    <div className="w-12 h-12 border border-white/30 bg-black/60 overflow-hidden flex items-center justify-center">
+                      <img
+                        src={`data:${portraitBase64.mimeType || "image/png"};base64,${portraitBase64.data}`}
+                        alt="Portrait preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <p className="text-[11px] text-white/50 truncate">
+                    {portraitFileName}
+                  </p>
+                </div>
+              )}
+              <p className="text-[11px] text-white/40">
+                Upload a portrait photo to guide the design (NanoBanana /
+                Gemini only). The AI will keep the likeness but apply the
+                chosen style.
+              </p>
+            </div>
+          )}
 
           {/* Prompt */}
           <div className="space-y-2">

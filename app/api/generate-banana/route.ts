@@ -39,7 +39,10 @@ async function getAccessToken(): Promise<string> {
   return token;
 }
 
-async function generateBananaImages(prompt: string): Promise<string[]> {
+async function generateBananaImages(
+  prompt: string,
+  referenceImage?: { data: string; mimeType?: string }
+): Promise<string[]> {
   const accessToken = await getAccessToken();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${BANANA_VERTEX_MODEL_ID}:generateContent`;
 
@@ -51,7 +54,20 @@ async function generateBananaImages(prompt: string): Promise<string[]> {
       contents: [
         {
           role: "user",
-          parts: [{ text: prompt }],
+          parts: [
+            // If a reference image is provided, send it as inlineData first
+            ...(referenceImage
+              ? [
+                  {
+                    inlineData: {
+                      data: referenceImage.data,
+                      mimeType: referenceImage.mimeType || "image/png",
+                    },
+                  },
+                ]
+              : []),
+            { text: prompt },
+          ],
         },
       ],
     };
@@ -99,7 +115,8 @@ async function generateBananaImages(prompt: string): Promise<string[]> {
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt } = await req.json();
+    const { prompt, referenceImage, referenceImageMimeType } =
+      await req.json();
 
     const promptRaw = String(prompt || "").trim();
     if (!promptRaw) {
@@ -109,7 +126,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const images = await generateBananaImages(promptRaw);
+    const images = await generateBananaImages(promptRaw, {
+      data: referenceImage,
+      mimeType: referenceImageMimeType,
+    });
 
     return NextResponse.json({
       prompt: promptRaw,
