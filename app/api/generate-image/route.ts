@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth, type JWTInput } from "google-auth-library";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const VERTEX_LOCATION = process.env.VERTEX_LOCATION || "us-central1";
 const IMAGE_MODEL = "imagen-4.0-generate-001";
@@ -94,6 +95,39 @@ async function generateImagen4Images(
   return images;
 }
 
+async function generateGeminiImages(prompt: string): Promise<string[]> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "GEMINI_API_KEY is not set. Add it to your .env.local to use Gemini image generation."
+    );
+  }
+
+  // Model name for image generation via Google AI Studio (adjust via env if needed)
+  const modelId =
+    (process.env.GEMINI_IMAGE_MODEL || "").trim() || "imagegeneration";
+
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: modelId });
+
+  const response = await model.generateContent(prompt);
+
+  const parts = response.response?.candidates?.[0]?.content?.parts || [];
+
+  const images = parts
+    .filter((p: any) => p.inlineData && p.inlineData.data)
+    .map(
+      (p: any) =>
+        `data:${p.inlineData.mimeType || "image/png"};base64,${p.inlineData.data}`
+    );
+
+  if (!images.length) {
+    throw new Error("Gemini did not return any image data.");
+  }
+
+  return images;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { prompt, model } = await req.json();
@@ -107,21 +141,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (model && model !== "imagen4") {
+    let images: string[] = [];
+
+    // Imagen 4 via Vertex AI
+    if (!model || model === "imagen4") {
+      const projectId = getProjectId();
+      const accessToken = await getAccessToken();
+
+      images = await generateImagen4Images(promptRaw, accessToken, projectId);
+    }
+    // Gemini / NanoBanana image generation via Generative Language API
+    else if (model === "nanobanana" || model === "gemini25") {
+      images = await generateGeminiImages(promptRaw);
+    } else {
       return NextResponse.json(
-        { error: "Only Imagen 4 is wired up right now." },
+        { error: `Unknown model '${model}'.` },
         { status: 400 }
       );
     }
-
-    const projectId = getProjectId();
-    const accessToken = await getAccessToken();
-
-    const images = await generateImagen4Images(
-      promptRaw,
-      accessToken,
-      projectId
-    );
 
     return NextResponse.json({
       prompt: promptRaw,

@@ -23,7 +23,15 @@ export default function GeneratePage() {
     setResultText("");
     setImages(null);
     try {
-      const res = await fetch("/api/generate-image", {
+      // Decide which backend route to call based on selected model.
+      // - imagen4  -> Vertex Imagen 4 (existing route, DO NOT TOUCH)
+      // - nanobanana / gemini25 -> Gemini/NanoBanana route
+      const endpoint =
+        selectedModel === "imagen4"
+          ? "/api/generate-image"
+          : "/api/generate-banana";
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), model: selectedModel }),
