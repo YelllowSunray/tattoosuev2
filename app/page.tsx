@@ -32,6 +32,7 @@ export default function Home() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(60);
 
   // Watch Firebase auth state
   useEffect(() => {
@@ -88,8 +89,14 @@ export default function Home() {
   }, [user]);
 
   useEffect(() => {
-    const filtered = filterTattoos(allImages, selectedCategoryId, selectedStyleId, selectedBodyPart);
+    const filtered = filterTattoos(
+      allImages,
+      selectedCategoryId,
+      selectedStyleId,
+      selectedBodyPart
+    );
     setFilteredImages(filtered);
+    setVisibleCount(60);
   }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
   // While checking auth state
@@ -285,7 +292,22 @@ export default function Home() {
               </div>
 
               {/* Gallery */}
-              <TattooGallery images={filteredImages} allImages={allImages} />
+              <TattooGallery
+                images={filteredImages.slice(0, visibleCount)}
+                allImages={allImages}
+              />
+
+              {filteredImages.length > visibleCount && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount((c) => c + 60)}
+                    className="px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 hover:bg-zinc-200 transition-colors"
+                  >
+                    Load more ({filteredImages.length - visibleCount} more)
+                  </button>
+                </div>
+              )}
             </>
           )}
         </div>

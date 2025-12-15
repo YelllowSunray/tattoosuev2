@@ -56,6 +56,7 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
               src={image.url}
               alt={`${formatLabel(image.style)} ${image.bodyPart} tattoo`}
               fill
+              loading="lazy"
               className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
             />
@@ -102,6 +103,7 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
                     src={selectedImage.url}
                     alt={`${formatLabel(selectedImage.style)} ${selectedImage.bodyPart} tattoo`}
                     fill
+                    loading="eager"
                     className="object-contain"
                     sizes="(max-width: 768px) 100vw, 800px"
                   />
@@ -140,6 +142,7 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
                           src={alt.url}
                           alt={`${formatLabel(alt.style)} ${alt.bodyPart} tattoo`}
                           fill
+                          loading="lazy"
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                         />

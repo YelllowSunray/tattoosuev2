@@ -84,6 +84,7 @@ export default function HistoryPage() {
                 <img
                   src={img.url}
                   alt={img.fileName}
+                  loading="lazy"
                   className="w-full h-auto object-contain"
                 />
               </div>
