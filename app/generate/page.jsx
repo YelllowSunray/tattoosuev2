@@ -32,7 +32,8 @@ export default function GeneratePage() {
   const [resultText, setResultText] = useState("");
   const [images, setImages] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
-  const [selectedStyleId, setSelectedStyleId] = useState(null);
+  const [selectedStyleIds, setSelectedStyleIds] = useState([]);
+  const [currentStyleId, setCurrentStyleId] = useState("");
   const [selectedPlacements, setSelectedPlacements] = useState([]);
   const [portraitFileName, setPortraitFileName] = useState("");
   const [portraitBase64, setPortraitBase64] = useState(null);
@@ -82,18 +83,21 @@ export default function GeneratePage() {
       let fullPrompt = prompt.trim();
       const extraParts = [];
 
-      const category =
-        typeof selectedCategoryId === "number"
-          ? TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId)
-          : null;
-      const style =
-        category && typeof selectedStyleId === "number"
-          ? category.styles.find((s) => s.id === selectedStyleId)
-          : null;
+      let selectedStyles = [];
+      if (selectedStyleIds.length > 0) {
+        selectedStyles = TATTOO_CATEGORIES.flatMap((c) =>
+          (c.styles || []).filter((s) => selectedStyleIds.includes(s.id))
+        );
+      }
 
-      if (style) {
-        extraParts.push(`${style.name} tattoo style`);
-      } else if (category) {
+      if (selectedStyles.length > 0) {
+        const styleNames = selectedStyles.map((s) => s.name).join(", ");
+        extraParts.push(`${styleNames} tattoo style`);
+      } else if (
+        typeof selectedCategoryId === "number" &&
+        TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId)
+      ) {
+        const category = TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId);
         extraParts.push(`${category.name} tattoo style`);
       }
 
@@ -230,8 +234,9 @@ export default function GeneratePage() {
                 value={selectedCategoryId ?? ""}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setSelectedCategoryId(val ? Number(val) : null);
-                  setSelectedStyleId(null);
+                  const id = val ? Number(val) : null;
+                  setSelectedCategoryId(id);
+                  setCurrentStyleId("");
                 }}
                 className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
               >
@@ -243,30 +248,82 @@ export default function GeneratePage() {
                 ))}
               </select>
 
-              <select
-                value={selectedStyleId ?? ""}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedStyleId(val ? Number(val) : null);
-                }}
-                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
-                disabled={!selectedCategoryId}
-              >
-                <option value="">
-                  {selectedCategoryId
-                    ? "All styles in category"
-                    : "Select a category first"}
-                </option>
-                {selectedCategoryId &&
-                  TATTOO_CATEGORIES.find(
-                    (c) => c.id === selectedCategoryId
-                  )?.styles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={currentStyleId}
+                  onChange={(e) => setCurrentStyleId(e.target.value)}
+                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                  disabled={!selectedCategoryId}
+                >
+                  <option value="">
+                    {selectedCategoryId
+                      ? "Select a style"
+                      : "Select a category first"}
+                  </option>
+                  {selectedCategoryId &&
+                    TATTOO_CATEGORIES.find(
+                      (c) => c.id === selectedCategoryId
+                    )?.styles.map((style) => (
+                      <option key={style.id} value={style.id}>
+                        {style.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!currentStyleId) return;
+                    const id = Number(currentStyleId);
+                    setSelectedStyleIds((prev) =>
+                      prev.includes(id) ? prev : [...prev, id]
+                    );
+                    setCurrentStyleId("");
+                  }}
+                  disabled={
+                    !selectedCategoryId ||
+                    !currentStyleId ||
+                    selectedStyleIds.includes(Number(currentStyleId))
+                  }
+                  className="px-2 py-1 text-xs border border-white/40 rounded-full text-white hover:bg-white hover:text-black disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Add style"
+                >
+                  +
+                </button>
+              </div>
             </div>
+
+            {selectedStyleIds.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedStyleIds.map((id) => {
+                  // Find style across all categories so multiple-category
+                  // selections are supported.
+                  let style = null;
+                  for (const cat of TATTOO_CATEGORIES) {
+                    const found = (cat.styles || []).find((s) => s.id === id);
+                    if (found) {
+                      style = found;
+                      break;
+                    }
+                  }
+                  if (!style) return null;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() =>
+                        setSelectedStyleIds((prev) =>
+                          prev.filter((styleId) => styleId !== id)
+                        )
+                      }
+                      className="px-2 py-1 text-[11px] border border-white/40 rounded-full text-white/80 hover:bg-white hover:text-black flex items-center gap-1"
+                    >
+                      <span>{style.name}</span>
+                      <span>×</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Model picker */}
