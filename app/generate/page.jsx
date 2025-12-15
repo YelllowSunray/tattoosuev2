@@ -33,7 +33,7 @@ export default function GeneratePage() {
   const [images, setImages] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [selectedStyleId, setSelectedStyleId] = useState(null);
-  const [selectedPlacement, setSelectedPlacement] = useState(null);
+  const [selectedPlacements, setSelectedPlacements] = useState([]);
   const [portraitFileName, setPortraitFileName] = useState("");
   const [portraitBase64, setPortraitBase64] = useState(null);
 
@@ -78,7 +78,7 @@ export default function GeneratePage() {
           ? "/api/generate-image"
           : "/api/generate-banana";
 
-      // Build an enriched prompt using selected style and placement
+      // Enrich prompt with selected style and placement
       let fullPrompt = prompt.trim();
       const extraParts = [];
 
@@ -97,10 +97,9 @@ export default function GeneratePage() {
         extraParts.push(`${category.name} tattoo style`);
       }
 
-      if (selectedPlacement) {
-        extraParts.push(
-          `placement on the ${selectedPlacement.toLowerCase()}`
-        );
+      if (selectedPlacements.length > 0) {
+        const places = selectedPlacements.map((p) => p.toLowerCase()).join(" or ");
+        extraParts.push(`placement on the ${places}`);
       }
 
       if (extraParts.length > 0) {
@@ -172,12 +171,20 @@ export default function GeneratePage() {
               ideas.
             </p>
           </div>
-          <Link
-            href="/"
-            className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-          >
-            ← Back to gallery
-          </Link>
+          <div className="flex flex-col items-end gap-2">
+            <Link
+              href="/"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            >
+              ← Back to gallery
+            </Link>
+            <Link
+              href="/history"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            >
+              History
+            </Link>
+          </div>
         </div>
 
         <form onSubmit={handleGenerate} className="space-y-6">
@@ -186,26 +193,31 @@ export default function GeneratePage() {
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
               Placement (optional)
             </label>
-            <div className="flex flex-wrap gap-2">
-              {PLACEMENTS.map((place) => (
+          <div className="flex flex-wrap gap-2">
+            {PLACEMENTS.map((place) => {
+              const active = selectedPlacements.includes(place);
+              return (
                 <button
                   key={place}
                   type="button"
                   onClick={() =>
-                    setSelectedPlacement(
-                      selectedPlacement === place ? null : place
+                    setSelectedPlacements((prev) =>
+                      prev.includes(place)
+                        ? prev.filter((p) => p !== place)
+                        : [...prev, place]
                     )
                   }
                   className={`px-3 py-1.5 text-xs border transition-colors capitalize ${
-                    selectedPlacement === place
+                    active
                       ? "bg-white text-black border-white"
-                      : "bg-transparent text-white/70 border-white/30 hover:border-white/60"
+                      : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
                   }`}
                 >
                   {place}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           </div>
 
           {/* Category + style selection */}
@@ -241,16 +253,18 @@ export default function GeneratePage() {
                 disabled={!selectedCategoryId}
               >
                 <option value="">
-                  {selectedCategoryId ? "All styles in category" : "Select a category first"}
+                  {selectedCategoryId
+                    ? "All styles in category"
+                    : "Select a category first"}
                 </option>
                 {selectedCategoryId &&
-                  TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId)?.styles.map(
-                    (style) => (
-                      <option key={style.id} value={style.id}>
-                        {style.name}
-                      </option>
-                    )
-                  )}
+                  TATTOO_CATEGORIES.find(
+                    (c) => c.id === selectedCategoryId
+                  )?.styles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
