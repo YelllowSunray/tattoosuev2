@@ -9,6 +9,8 @@ export interface TattooImage {
   fileName: string;
   category?: TattooCategory; // Matched category
   matchedStyle?: TattooStyle; // Matched style
+  price?: number; // Price in cents or base currency unit
+  duration?: number; // Duration in minutes
 }
 
 /**

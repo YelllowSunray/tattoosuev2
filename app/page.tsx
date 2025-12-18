@@ -33,6 +33,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(60);
+  const [showPriceDuration, setShowPriceDuration] = useState(true);
 
   // Watch Firebase auth state
   useEffect(() => {
@@ -76,8 +77,37 @@ export default function Home() {
           getUniqueBodyParts(),
         ]);
 
-        setAllImages(images);
-        setFilteredImages(images);
+        // Load prices.json and merge with images
+        try {
+          const pricesResponse = await fetch('/prices.json');
+          if (pricesResponse.ok) {
+            const pricesData: Array<{ fileName: string; price: number; duration: number }> = await pricesResponse.json();
+            const pricesMap = new Map<string, { price: number; duration: number }>();
+            pricesData.forEach(item => {
+              pricesMap.set(item.fileName, { price: item.price, duration: item.duration });
+            });
+
+            // Merge price and duration data with images
+            const imagesWithPrices = images.map(image => ({
+              ...image,
+              price: pricesMap.get(image.fileName)?.price,
+              duration: pricesMap.get(image.fileName)?.duration,
+            }));
+
+            setAllImages(imagesWithPrices);
+            setFilteredImages(imagesWithPrices);
+          } else {
+            // If prices.json doesn't exist or fails to load, use images without prices
+            setAllImages(images);
+            setFilteredImages(images);
+          }
+        } catch (pricesError) {
+          console.error("Error loading prices:", pricesError);
+          // Continue with images without prices
+          setAllImages(images);
+          setFilteredImages(images);
+        }
+
         setBodyParts(uniqueBodyParts);
       } catch (error) {
         console.error("Error loading tattoo data:", error);
@@ -216,14 +246,7 @@ export default function Home() {
         {/* Sidebar */}
         <aside className="hidden lg:block w-80 border-r border-white/5 bg-black/40 backdrop-blur-sm sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
           <div className="p-6">
-            {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-white/20 border-t-white/60 mb-4"></div>
-                  <p className="text-white/40 text-xs font-light">Loading...</p>
-                </div>
-              </div>
-            ) : (
+            {!loading && (
               <TattooFilter
                 images={allImages}
                 bodyParts={bodyParts}
@@ -233,6 +256,11 @@ export default function Home() {
                 onCategoryChange={setSelectedCategoryId}
                 onStyleChange={setSelectedStyleId}
                 onBodyPartChange={setSelectedBodyPart}
+                onClearAll={() => {
+                  setSelectedCategoryId(undefined);
+                  setSelectedStyleId(undefined);
+                  setSelectedBodyPart(undefined);
+                }}
               />
             )}
           </div>
@@ -277,24 +305,39 @@ export default function Home() {
                   <span className="text-white/60 font-normal">{filteredImages.length}</span>{' '}
                   {filteredImages.length === 1 ? 'design' : 'designs'}
                 </p>
-                {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
-                  <button
-                    onClick={() => {
-                      setSelectedCategoryId(undefined);
-                      setSelectedStyleId(undefined);
-                      setSelectedBodyPart(undefined);
-                    }}
-                    className="text-xs text-white/40 hover:text-white/60 transition-colors font-light uppercase tracking-wider"
-          >
-                    Clear
-                  </button>
-                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-white/40 font-light uppercase tracking-wider">
+                    Show Price/Duration
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showPriceDuration}
+                    onChange={(e) => setShowPriceDuration(e.target.checked)}
+                    className="w-4 h-4 accent-white cursor-pointer"
+                  />
+                </label>
               </div>
 
               {/* Gallery */}
               <TattooGallery
                 images={filteredImages.slice(0, visibleCount)}
                 allImages={allImages}
+                showPriceDuration={showPriceDuration}
+                onStyleClick={(styleId) => {
+                  setSelectedStyleId(styleId);
+                  setSelectedCategoryId(undefined);
+                  setSelectedBodyPart(undefined);
+                }}
+                onCategoryClick={(categoryId) => {
+                  setSelectedCategoryId(categoryId);
+                  setSelectedStyleId(undefined);
+                  setSelectedBodyPart(undefined);
+                }}
+                onBodyPartClick={(bodyPart) => {
+                  setSelectedBodyPart(bodyPart);
+                  setSelectedCategoryId(undefined);
+                  setSelectedStyleId(undefined);
+                }}
               />
 
               {filteredImages.length > visibleCount && (
@@ -335,6 +378,11 @@ export default function Home() {
               onCategoryChange={setSelectedCategoryId}
               onStyleChange={setSelectedStyleId}
               onBodyPartChange={setSelectedBodyPart}
+              onClearAll={() => {
+                setSelectedCategoryId(undefined);
+                setSelectedStyleId(undefined);
+                setSelectedBodyPart(undefined);
+              }}
             />
             <div className="flex gap-2">
               <button

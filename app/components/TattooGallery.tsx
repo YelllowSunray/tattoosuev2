@@ -7,9 +7,13 @@ import { TattooImage, getAlternatives } from '@/lib/firebase-utils';
 interface TattooGalleryProps {
   images: TattooImage[];
   allImages: TattooImage[];
+  showPriceDuration?: boolean;
+  onStyleClick?: (styleId: number) => void;
+  onCategoryClick?: (categoryId: number) => void;
+  onBodyPartClick?: (bodyPart: string) => void;
 }
 
-export default function TattooGallery({ images, allImages }: TattooGalleryProps) {
+export default function TattooGallery({ images, allImages, showPriceDuration = true, onStyleClick, onCategoryClick, onBodyPartClick }: TattooGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<TattooImage | null>(null);
   const [alternatives, setAlternatives] = useState<TattooImage[]>([]);
 
@@ -62,15 +66,66 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="text-white text-sm font-light mb-1 tracking-wide">
-                  {getDisplayName(image)}
-                </p>
-                {image.category && (
+                {image.matchedStyle && onStyleClick ? (
+                  <p 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onStyleClick(image.matchedStyle!.id);
+                      setSelectedImage(null);
+                    }}
+                    className="text-white text-sm font-light mb-1 tracking-wide hover:text-white/80 cursor-pointer transition-colors"
+                  >
+                    {getDisplayName(image)}
+                  </p>
+                ) : (
+                  <p className="text-white text-sm font-light mb-1 tracking-wide">
+                    {getDisplayName(image)}
+                  </p>
+                )}
+                {image.category && onCategoryClick ? (
+                  <p 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCategoryClick(image.category!.id);
+                      setSelectedImage(null);
+                    }}
+                    className="text-white/50 text-xs font-light mb-1 tracking-wide hover:text-white/70 cursor-pointer transition-colors"
+                  >
+                    {image.category.name}
+                  </p>
+                ) : image.category ? (
                   <p className="text-white/50 text-xs font-light mb-1 tracking-wide">
                     {image.category.name}
                   </p>
+                ) : null}
+                {onBodyPartClick ? (
+                  <p 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onBodyPartClick(image.bodyPart);
+                      setSelectedImage(null);
+                    }}
+                    className="text-white/60 text-xs font-light capitalize tracking-wide mb-2 hover:text-white/80 cursor-pointer transition-colors"
+                  >
+                    {image.bodyPart}
+                  </p>
+                ) : (
+                  <p className="text-white/60 text-xs font-light capitalize tracking-wide mb-2">{image.bodyPart}</p>
                 )}
-                <p className="text-white/60 text-xs font-light capitalize tracking-wide">{image.bodyPart}</p>
+                {showPriceDuration && (image.price !== undefined || image.duration !== undefined) && (
+                  <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/10">
+                    {image.price !== undefined && (
+                      <p className="text-white text-xs font-medium">
+                        ${image.price.toLocaleString()}
+                      </p>
+                    )}
+                    {image.duration !== undefined && (
+                      <p className="text-white/60 text-xs font-light">
+                        {image.duration} hours
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -109,15 +164,69 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
                   />
                 </div>
                 <div className="mt-8 text-center">
-                  <h3 className="text-3xl md:text-4xl font-light text-white mb-2 tracking-tight">
-                    {getDisplayName(selectedImage)}
-                  </h3>
-                  {selectedImage.category && (
+                  {selectedImage.matchedStyle && onStyleClick ? (
+                    <h3 
+                      onClick={() => {
+                        onStyleClick(selectedImage.matchedStyle!.id);
+                        setSelectedImage(null);
+                      }}
+                      className="text-3xl md:text-4xl font-light text-white mb-2 tracking-tight hover:text-white/80 cursor-pointer transition-colors"
+                    >
+                      {getDisplayName(selectedImage)}
+                    </h3>
+                  ) : (
+                    <h3 className="text-3xl md:text-4xl font-light text-white mb-2 tracking-tight">
+                      {getDisplayName(selectedImage)}
+                    </h3>
+                  )}
+                  {selectedImage.category && onCategoryClick ? (
+                    <p 
+                      onClick={() => {
+                        onCategoryClick(selectedImage.category!.id);
+                        setSelectedImage(null);
+                      }}
+                      className="text-white/60 text-sm font-light mb-2 tracking-wide hover:text-white/80 cursor-pointer transition-colors"
+                    >
+                      {selectedImage.category.name}
+                    </p>
+                  ) : selectedImage.category ? (
                     <p className="text-white/60 text-sm font-light mb-2 tracking-wide">
                       {selectedImage.category.name}
                     </p>
+                  ) : null}
+                  {onBodyPartClick ? (
+                    <p 
+                      onClick={() => {
+                        onBodyPartClick(selectedImage.bodyPart);
+                        setSelectedImage(null);
+                      }}
+                      className="text-white/50 text-sm font-light uppercase tracking-[0.15em] mb-4 hover:text-white/80 cursor-pointer transition-colors"
+                    >
+                      {selectedImage.bodyPart}
+                    </p>
+                  ) : (
+                    <p className="text-white/50 text-sm font-light uppercase tracking-[0.15em] mb-4">{selectedImage.bodyPart}</p>
                   )}
-                  <p className="text-white/50 text-sm font-light uppercase tracking-[0.15em]">{selectedImage.bodyPart}</p>
+                  {showPriceDuration && (selectedImage.price !== undefined || selectedImage.duration !== undefined) && (
+                    <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-white/10">
+                      {selectedImage.price !== undefined && (
+                        <div>
+                          <p className="text-white/40 text-xs font-light uppercase tracking-[0.15em] mb-1">Price</p>
+                          <p className="text-white text-xl font-light">
+                            ${selectedImage.price.toLocaleString()}
+                          </p>
+                        </div>
+                      )}
+                      {selectedImage.duration !== undefined && (
+                        <div>
+                          <p className="text-white/40 text-xs font-light uppercase tracking-[0.15em] mb-1">Duration</p>
+                          <p className="text-white text-xl font-light">
+                            {selectedImage.duration} hours
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -148,15 +257,66 @@ export default function TattooGallery({ images, allImages }: TattooGalleryProps)
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
                           <div className="absolute bottom-0 left-0 right-0 p-3">
-                            <p className="text-white text-xs font-light mb-0.5">
-                              {getDisplayName(alt)}
-                            </p>
-                            {alt.category && (
+                            {alt.matchedStyle && onStyleClick ? (
+                              <p 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onStyleClick(alt.matchedStyle!.id);
+                                  setSelectedImage(null);
+                                }}
+                                className="text-white text-xs font-light mb-0.5 hover:text-white/80 cursor-pointer transition-colors"
+                              >
+                                {getDisplayName(alt)}
+                              </p>
+                            ) : (
+                              <p className="text-white text-xs font-light mb-0.5">
+                                {getDisplayName(alt)}
+                              </p>
+                            )}
+                            {alt.category && onCategoryClick ? (
+                              <p 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onCategoryClick(alt.category!.id);
+                                  setSelectedImage(null);
+                                }}
+                                className="text-white/50 text-xs font-light mb-0.5 hover:text-white/70 cursor-pointer transition-colors"
+                              >
+                                {alt.category.name}
+                              </p>
+                            ) : alt.category ? (
                               <p className="text-white/50 text-xs font-light mb-0.5">
                                 {alt.category.name}
                               </p>
+                            ) : null}
+                            {onBodyPartClick ? (
+                              <p 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onBodyPartClick(alt.bodyPart);
+                                  setSelectedImage(null);
+                                }}
+                                className="text-white/60 text-xs font-light capitalize mb-1 hover:text-white/80 cursor-pointer transition-colors"
+                              >
+                                {alt.bodyPart}
+                              </p>
+                            ) : (
+                              <p className="text-white/60 text-xs font-light capitalize mb-1">{alt.bodyPart}</p>
                             )}
-                            <p className="text-white/60 text-xs font-light capitalize">{alt.bodyPart}</p>
+                            {showPriceDuration && (alt.price !== undefined || alt.duration !== undefined) && (
+                              <div className="flex items-center gap-2 mt-1 pt-1 border-t border-white/10">
+                                {alt.price !== undefined && (
+                                  <p className="text-white text-[10px] font-medium">
+                                    ${alt.price.toLocaleString()}
+                                  </p>
+                                )}
+                                {alt.duration !== undefined && (
+                                  <p className="text-white/60 text-[10px] font-light">
+                                    {alt.duration}h
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

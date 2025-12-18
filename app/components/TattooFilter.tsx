@@ -13,6 +13,7 @@ interface TattooFilterProps {
   onCategoryChange: (categoryId?: number) => void;
   onStyleChange: (styleId?: number) => void;
   onBodyPartChange: (bodyPart?: string) => void;
+  onClearAll?: () => void;
 }
 
 export default function TattooFilter({
@@ -24,6 +25,7 @@ export default function TattooFilter({
   onCategoryChange,
   onStyleChange,
   onBodyPartChange,
+  onClearAll,
 }: TattooFilterProps) {
   const [expandedCategory, setExpandedCategory] = useState<number | null>(selectedCategoryId || null);
   
@@ -48,9 +50,19 @@ export default function TattooFilter({
     <div className="space-y-6 max-h-full">
       {/* Body Part Selection */}
       <div>
-        <label className="block text-xs text-white/40 mb-3 uppercase tracking-[0.15em] font-light">
-          Placement
-        </label>
+        <div className="flex items-center justify-between mb-3">
+          <label className="block text-xs text-white/40 uppercase tracking-[0.15em] font-light">
+            Placement
+          </label>
+          {onClearAll && (selectedCategoryId || selectedStyleId || selectedBodyPart) && (
+            <button
+              onClick={onClearAll}
+              className="text-xs text-white/60 hover:text-white transition-colors font-light uppercase tracking-wider"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onBodyPartChange(undefined)}
