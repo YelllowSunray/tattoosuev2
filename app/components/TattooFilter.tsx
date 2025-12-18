@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { TattooCategory, TattooStyle } from '@/lib/tattoo-categories';
 import { TattooImage, getAvailableCategories, getStylesInCategory } from '@/lib/firebase-utils';
 
@@ -33,6 +33,13 @@ export default function TattooFilter({
   const stylesInSelectedCategory = selectedCategoryId 
     ? getStylesInCategory(images, selectedCategoryId)
     : [];
+
+  // Auto-expand category when it's selected (e.g., when clicking style from gallery)
+  useEffect(() => {
+    if (selectedCategoryId && expandedCategory !== selectedCategoryId) {
+      setExpandedCategory(selectedCategoryId);
+    }
+  }, [selectedCategoryId, expandedCategory]);
 
   const toggleCategory = (categoryId: number) => {
     if (expandedCategory === categoryId) {

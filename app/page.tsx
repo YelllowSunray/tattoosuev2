@@ -10,6 +10,7 @@ import {
   filterTattoos,
   TattooImage,
 } from "@/lib/firebase-utils";
+import { getStyleById } from "@/lib/tattoo-categories";
 import { auth } from "@/lib/firebase";
 import {
   onAuthStateChanged,
@@ -324,19 +325,38 @@ export default function Home() {
                 allImages={allImages}
                 showPriceDuration={showPriceDuration}
                 onStyleClick={(styleId) => {
-                  setSelectedStyleId(styleId);
-                  setSelectedCategoryId(undefined);
-                  setSelectedBodyPart(undefined);
+                  // Toggle style: if same style clicked, clear it; otherwise set it
+                  const newStyleId = selectedStyleId === styleId ? undefined : styleId;
+                  setSelectedStyleId(newStyleId);
+                  
+                  // Set category to match the style's category, but keep body part filter
+                  if (newStyleId) {
+                    const styleInfo = getStyleById(newStyleId);
+                    if (styleInfo) {
+                      setSelectedCategoryId(styleInfo.category.id);
+                    }
+                  } else {
+                    // If clearing style, also clear category
+                    setSelectedCategoryId(undefined);
+                  }
+                  // Body part filter remains unchanged
                 }}
                 onCategoryClick={(categoryId) => {
-                  setSelectedCategoryId(categoryId);
-                  setSelectedStyleId(undefined);
-                  setSelectedBodyPart(undefined);
+                  // Toggle category: if same category clicked, clear it; otherwise set it
+                  const newCategoryId = selectedCategoryId === categoryId ? undefined : categoryId;
+                  setSelectedCategoryId(newCategoryId);
+                  
+                  // If category is cleared or changed, clear style (since style must belong to category)
+                  // But keep body part filter active
+                  if (!newCategoryId || newCategoryId !== selectedCategoryId) {
+                    setSelectedStyleId(undefined);
+                  }
+                  // Body part filter remains unchanged
                 }}
                 onBodyPartClick={(bodyPart) => {
-                  setSelectedBodyPart(bodyPart);
-                  setSelectedCategoryId(undefined);
-                  setSelectedStyleId(undefined);
+                  // Toggle body part: if same body part clicked, clear it; otherwise set it
+                  setSelectedBodyPart(selectedBodyPart === bodyPart ? undefined : bodyPart);
+                  // Keep style and category filters active (they compound with body part)
                 }}
               />
 
