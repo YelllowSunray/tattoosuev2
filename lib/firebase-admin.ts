@@ -30,8 +30,10 @@ function getAdminApp(): App {
       );
     }
     
+    // JWTInput from google-auth-library is compatible with ServiceAccount from firebase-admin
+    // They have the same structure, so we cast it appropriately
     adminApp = initializeApp({
-      credential: cert(serviceAccount),
+      credential: cert(serviceAccount as any),
       projectId: firebaseProjectId, // Use Firebase project ID, not service account project_id
     });
 
