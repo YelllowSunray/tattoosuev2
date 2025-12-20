@@ -35,32 +35,43 @@ export default function GeneratePage() {
   const [selectedStyleIds, setSelectedStyleIds] = useState([]);
   const [currentStyleId, setCurrentStyleId] = useState("");
   const [selectedPlacements, setSelectedPlacements] = useState([]);
-  const [portraitFileName, setPortraitFileName] = useState("");
-  const [portraitBase64, setPortraitBase64] = useState(null);
+  const [referenceImages, setReferenceImages] = useState([]);
+  const [referenceImageType, setReferenceImageType] = useState("placement"); // "placement" or "subject"
 
   const handlePortraitChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setPortraitBase64(null);
-      setPortraitFileName("");
+    const files = e.target.files;
+    if (!files || files.length === 0) {
       return;
     }
-    setPortraitFileName(file.name);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result;
-      if (typeof result === "string" && result.startsWith("data:")) {
-        // Strip "data:mime;base64," prefix to send clean base64
-        const base64 = result.split(",")[1];
-        setPortraitBase64({
-          data: base64,
-          mimeType: file.type || "image/png",
-        });
-      } else {
-        setPortraitBase64(null);
-      }
-    };
-    reader.readAsDataURL(file);
+
+    // Process all selected files
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result;
+        if (typeof result === "string" && result.startsWith("data:")) {
+          // Strip "data:mime;base64," prefix to send clean base64
+          const base64 = result.split(",")[1];
+          const imageData = {
+            data: base64,
+            mimeType: file.type || "image/png",
+            fileName: file.name,
+            type: referenceImageType, // Store the type when image is uploaded
+          };
+          
+          // Add to state
+          setReferenceImages((prev) => [...prev, imageData]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset the input so the same file can be selected again if needed
+    e.target.value = "";
+  };
+
+  const removeReferenceImage = (index) => {
+    setReferenceImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleGenerate = async (e) => {
@@ -117,13 +128,22 @@ export default function GeneratePage() {
         model: selectedModel,
       };
 
-      // Only send portrait reference when using NanoBanana / Gemini models
+      // Only send reference images when using NanoBanana / Gemini models
+      // Filter images by the currently selected type
+      const imagesForCurrentType = referenceImages.filter(img => img.type === referenceImageType);
       if (
         (selectedModel === "nanobanana" || selectedModel === "gemini25") &&
-        portraitBase64
+        imagesForCurrentType.length > 0
       ) {
-        body.referenceImage = portraitBase64.data;
-        body.referenceImageMimeType = portraitBase64.mimeType;
+        body.referenceImages = imagesForCurrentType.map(img => ({
+          data: img.data,
+          mimeType: img.mimeType,
+        }));
+        body.referenceImageType = referenceImageType; // "placement" or "subject"
+        // Include selected placements for placement photos
+        if (referenceImageType === "placement" && selectedPlacements.length > 0) {
+          body.selectedPlacements = selectedPlacements;
+        }
       }
 
       const res = await fetch(endpoint, {
@@ -349,39 +369,121 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          {/* Portrait reference upload (NanoBanana / Gemini only) */}
+          {/* Reference image upload (NanoBanana / Gemini only) */}
           {(selectedModel === "nanobanana" || selectedModel === "gemini25") && (
-            <div className="space-y-2">
-              <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-                Portrait reference (optional)
-              </label>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+                  Reference Image (optional)
+                </label>
+                
+                {/* Image type selector */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReferenceImageType("placement");
+                    }}
+                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                      referenceImageType === "placement"
+                        ? "bg-white text-black border-white"
+                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                    }`}
+                  >
+                    Placement Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReferenceImageType("subject");
+                    }}
+                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                      referenceImageType === "subject"
+                        ? "bg-white text-black border-white"
+                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                    }`}
+                  >
+                    Subject Photo
+                  </button>
+                </div>
+                
+                <p className="text-[11px] text-white/50">
+                  {referenceImageType === "placement" 
+                    ? "Placement: Body photo showing where the tattoo should be placed (e.g., arm, back, chest)"
+                    : "Subject: Photo of the subject matter for the tattoo design (e.g., animal, flower, symbol)"}
+                </p>
+              </div>
+              
               <input
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handlePortraitChange}
                 className="block w-full text-xs text-white/70 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-black hover:file:bg-zinc-200"
               />
-              {portraitFileName && (
-                <div className="flex items-center gap-3 mt-2">
-                  {portraitBase64 && (
-                    <div className="w-12 h-12 border border-white/30 bg-black/60 overflow-hidden flex items-center justify-center">
-                      <img
-                        src={`data:${portraitBase64.mimeType || "image/png"};base64,${portraitBase64.data}`}
-                        alt="Portrait preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <p className="text-[11px] text-white/50 truncate">
-                    {portraitFileName}
+              {referenceImages.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <p className="text-[11px] text-white/50">
+                    {referenceImages.length} image{referenceImages.length > 1 ? "s" : ""} total
+                    {referenceImages.filter(img => img.type === referenceImageType).length > 0 && (
+                      <span className="ml-1">
+                        ({referenceImages.filter(img => img.type === referenceImageType).length} {referenceImageType})
+                      </span>
+                    )}
                   </p>
+                  <div className="space-y-2">
+                    {/* Show images for current type */}
+                    {referenceImages.filter(img => img.type === referenceImageType).length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-white/40 mb-1 uppercase">
+                          {referenceImageType === "placement" ? "Placement Photos" : "Subject Photos"}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {referenceImages
+                            .map((img, originalIndex) => ({ img, originalIndex }))
+                            .filter(({ img }) => img.type === referenceImageType)
+                            .map(({ img, originalIndex }) => (
+                              <div
+                                key={originalIndex}
+                                className="relative group flex items-center gap-2 border border-white/30 bg-black/60 p-2"
+                              >
+                                <div className="w-12 h-12 border border-white/30 bg-black/60 overflow-hidden flex items-center justify-center">
+                                  <img
+                                    src={`data:${img.mimeType || "image/png"};base64,${img.data}`}
+                                    alt={`Reference ${originalIndex + 1}`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <p className="text-[11px] text-white/50 truncate max-w-[120px]">
+                                  {img.fileName}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => removeReferenceImage(originalIndex)}
+                                  className="ml-1 text-white/70 hover:text-white text-xs px-1"
+                                  aria-label="Remove image"
+                                >
+                                  ×
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Show images for other type (if any) */}
+                    {referenceImages.filter(img => img.type !== referenceImageType).length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-white/30 mb-1 uppercase">
+                          {referenceImageType === "placement" ? "Subject Photos" : "Placement Photos"} (switch type to see)
+                        </p>
+                        <p className="text-[10px] text-white/40">
+                          {referenceImages.filter(img => img.type !== referenceImageType).length} image{referenceImages.filter(img => img.type !== referenceImageType).length > 1 ? "s" : ""} of other type
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              <p className="text-[11px] text-white/40">
-                Upload a portrait photo to guide the design (NanoBanana /
-                Gemini only). The AI will keep the likeness but apply the
-                chosen style.
-              </p>
             </div>
           )}
 
