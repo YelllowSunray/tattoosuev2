@@ -1,4 +1,5 @@
 import { GoogleAuth, type JWTInput } from 'google-auth-library';
+import { parseServiceAccountJson } from './service-account-parser';
 
 const VERTEX_LOCATION = process.env.VERTEX_LOCATION || process.env.VERTEX_AI_LOCATION || 'us-central1';
 
@@ -13,9 +14,10 @@ function parseServiceAccount(): JWTInput | null {
   const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
   if (json) {
     try {
-      return JSON.parse(json) as JWTInput;
+      return parseServiceAccountJson(json);
     } catch (error) {
       console.error('❌ Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON:', error);
+      return null;
     }
   }
   

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { parseServiceAccountJson } from './service-account-parser';
 
 let adminApp: App | null = null;
 let adminDb: Firestore | null = null;
@@ -16,16 +17,8 @@ function getAdminApp(): App {
     return adminApp;
   }
 
-  // Get service account from environment
-  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!serviceAccountJson) {
-    throw new Error(
-      'Missing GOOGLE_SERVICE_ACCOUNT_JSON environment variable. Required for server-side Firestore operations.'
-    );
-  }
-
   try {
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    const serviceAccount = parseServiceAccountJson(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
     
     // Use Firebase project ID explicitly, not the service account's project_id
     // The service account might be from a different GCP project

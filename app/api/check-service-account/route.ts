@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { parseServiceAccountJson } from "@/lib/service-account-parser";
 
 export async function GET(req: NextRequest) {
   try {
-    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-    
-    if (!serviceAccountJson) {
-      return NextResponse.json({
-        error: "GOOGLE_SERVICE_ACCOUNT_JSON not found in environment",
-      }, { status: 500 });
-    }
-
     let serviceAccount: any;
     try {
-      serviceAccount = JSON.parse(serviceAccountJson);
+      serviceAccount = parseServiceAccountJson(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
     } catch (e) {
       return NextResponse.json({
         error: "Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON",

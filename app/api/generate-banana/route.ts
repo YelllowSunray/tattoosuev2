@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth, type JWTInput } from "google-auth-library";
+import { parseServiceAccountJson } from "@/lib/service-account-parser";
 
 // Gemini / NanoBanana image model to use via Vertex / OAuth, NOT Imagen4.
 // Example values (you must ensure the model exists and supports images):
@@ -9,13 +10,7 @@ const BANANA_VERTEX_MODEL_ID =
   (process.env.BANANA_VERTEX_MODEL_ID || "").trim() || "gemini-2.5-flash-image";
 
 function parseServiceAccount(): JWTInput {
-  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!json) {
-    throw new Error(
-      "Missing GOOGLE_SERVICE_ACCOUNT_JSON env. Keep the service account key in .env.local."
-    );
-  }
-  return JSON.parse(json) as JWTInput;
+  return parseServiceAccountJson(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 }
 
 async function getAccessToken(): Promise<string> {
@@ -48,24 +43,21 @@ async function generateBananaImages(
 
   const images: string[] = [];
 
+  // Note: Most Gemini image generation models (like gemini-2.5-flash-image) 
+  // do NOT support input images - they only generate images from text prompts.
+  // If a reference image is provided, we'll log a warning and skip it.
+  if (referenceImage) {
+    console.warn(`⚠️  Reference image provided, but ${BANANA_VERTEX_MODEL_ID} does not support input images. Generating from text prompt only.`);
+  }
+
   // Call the API 4 times sequentially to get 4 images
   for (let i = 0; i < 4; i++) {
+    // Build the request body - image generation models only accept text prompts
     const body = {
       contents: [
         {
           role: "user",
           parts: [
-            // If a reference image is provided, send it as inlineData first
-            ...(referenceImage
-              ? [
-                  {
-                    inlineData: {
-                      data: referenceImage.data,
-                      mimeType: referenceImage.mimeType || "image/png",
-                    },
-                  },
-                ]
-              : []),
             { text: prompt },
           ],
         },
@@ -83,9 +75,14 @@ async function generateBananaImages(
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(
-        `Gemini (NanoBanana) generation failed: ${res.status} ${res.statusText} – ${errorText}`
-      );
+      let errorMessage = `Gemini (NanoBanana) generation failed: ${res.status} ${res.statusText} – ${errorText}`;
+      
+      // Provide helpful error message for image processing errors
+      if (res.status === 400 && errorText.includes("Unable to process input image")) {
+        errorMessage += "\n\n💡 Tip: This model may not support input/reference images. Try generating without a reference image.";
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const data = await res.json();
@@ -126,10 +123,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const images = await generateBananaImages(promptRaw, {
-      data: referenceImage,
-      mimeType: referenceImageMimeType,
-    });
+    // Validate and prepare reference image if provided
+    let referenceImageData: { data: string; mimeType: string } | undefined;
+    if (referenceImage) {
+      // Clean the base64 data - remove data URL prefix if present
+      let cleanBase64 = String(referenceImage).trim();
+      if (cleanBase64.includes(",")) {
+        cleanBase64 = cleanBase64.split(",")[1];
+      }
+      
+      // Validate base64 format
+      if (!cleanBase64 || cleanBase64.length === 0) {
+        console.warn("⚠️  Reference image provided but base64 data is empty, ignoring");
+      } else {
+        // Validate base64 characters
+        const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Regex.test(cleanBase64)) {
+          console.warn("⚠️  Reference image base64 data appears invalid, ignoring");
+        } else {
+          // Check image size (Gemini has limits - typically 20MB, but base64 is ~33% larger)
+          const sizeInBytes = (cleanBase64.length * 3) / 4;
+          const maxSize = 15 * 1024 * 1024; // 15MB to be safe
+          if (sizeInBytes > maxSize) {
+            return NextResponse.json(
+              { 
+                error: `Reference image is too large (${Math.round(sizeInBytes / 1024 / 1024)}MB). Maximum size is 15MB.` 
+              },
+              { status: 400 }
+            );
+          }
+          
+          referenceImageData = {
+            data: cleanBase64,
+            mimeType: referenceImageMimeType || "image/png",
+          };
+        }
+      }
+    }
+
+    const images = await generateBananaImages(promptRaw, referenceImageData);
 
     return NextResponse.json({
       prompt: promptRaw,

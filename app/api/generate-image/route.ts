@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth, type JWTInput } from "google-auth-library";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { parseServiceAccountJson } from "@/lib/service-account-parser";
 
 const VERTEX_LOCATION = process.env.VERTEX_LOCATION || "us-central1";
 const IMAGE_MODEL = "imagen-4.0-generate-001";
 
 function parseServiceAccount(): JWTInput {
-  const json = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
-  if (!json) {
-    throw new Error(
-      "Missing GOOGLE_SERVICE_ACCOUNT_JSON env. Keep the service account key in .env.local."
-    );
-  }
-  return JSON.parse(json) as JWTInput;
+  return parseServiceAccountJson(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
 }
 
 function getProjectId(): string {
@@ -166,10 +161,16 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("Imagen 4 generation failed:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // In development, provide more detailed error messages
+    const isDevelopment = process.env.NODE_ENV === "development";
+    
     return NextResponse.json(
       {
-        error:
-          "Unable to generate images with Imagen 4. Check server logs for details.",
+        error: isDevelopment 
+          ? errorMessage 
+          : "Unable to generate images with Imagen 4. Check server logs for details.",
       },
       { status: 500 }
     );
