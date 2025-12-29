@@ -2,13 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { auth } from "@/lib/firebase";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  User,
-} from "firebase/auth";
 
 interface EstimationResult {
   fileName: string;
@@ -22,11 +15,6 @@ interface EstimationResult {
 }
 
 export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimationProgress, setEstimationProgress] = useState<string>("");
   const [estimationResults, setEstimationResults] = useState<EstimationResult[]>([]);
@@ -35,36 +23,6 @@ export default function AdminPage() {
   const [firestoreWarning, setFirestoreWarning] = useState<string | null>(null);
   const [firestoreApiUrl, setFirestoreApiUrl] = useState<string | null>(null);
   const [startFromFileName, setStartFromFileName] = useState<string>("tessellation_back");
-
-  // Watch Firebase auth state
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-    } catch (err: any) {
-      console.error("Login error", err);
-      let message = "Unable to log in. Please check your details.";
-      if (err?.code === "auth/invalid-credential" || err?.code === "auth/wrong-password") {
-        message = "Wrong email or password.";
-      } else if (err?.code === "auth/user-not-found") {
-        message = "No user found with that email.";
-      }
-      setAuthError(message);
-    }
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
 
   const handleEstimateAll = async (startFrom?: string) => {
     setIsEstimating(true);
@@ -230,76 +188,6 @@ export default function AdminPage() {
     }
   };
 
-  // While checking auth state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mb-4" />
-          <p className="text-white/60 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If not logged in, show login screen
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black px-4">
-        <div className="w-full max-w-sm border border-white/10 bg-black/60 p-6 space-y-6">
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-light text-white tracking-tight">
-              Admin Panel
-            </h1>
-            <p className="text-xs text-white/50">
-              Sign in to access admin functions.
-            </p>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label className="block text-xs text-white/60">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white"
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-white/60">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white"
-                required
-              />
-            </div>
-            {authError && (
-              <p className="text-xs text-red-400">{authError}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full py-2 text-sm bg-white text-black hover:bg-white/90 transition-colors"
-            >
-              Sign In
-            </button>
-          </form>
-          <div className="text-center">
-            <Link
-              href="/"
-              className="text-xs text-white/60 hover:text-white transition-colors"
-            >
-              ← Back to Gallery
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Admin panel
   return (
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -320,12 +208,6 @@ export default function AdminPage() {
             >
               Gallery
             </Link>
-            <button
-              onClick={handleLogout}
-              className="text-sm text-white/60 hover:text-white transition-colors"
-            >
-              Sign Out
-            </button>
           </div>
         </div>
 

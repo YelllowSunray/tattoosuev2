@@ -11,13 +11,6 @@ import {
   TattooImage,
 } from "@/lib/firebase-utils";
 import { getStyleById } from "@/lib/tattoo-categories";
-import { auth } from "@/lib/firebase";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  User,
-} from "firebase/auth";
 
 export default function Home() {
   const [allImages, setAllImages] = useState<TattooImage[]>([]);
@@ -28,48 +21,11 @@ export default function Home() {
   const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(60);
   const [showPriceDuration, setShowPriceDuration] = useState(true);
 
-  // Watch Firebase auth state
+  // Load tattoo data
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser);
-      setAuthLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-    } catch (err: any) {
-      console.error("Login error", err);
-      let message = "Unable to log in. Please check your details.";
-      if (err?.code === "auth/invalid-credential" || err?.code === "auth/wrong-password") {
-        message = "Wrong email or password.";
-      } else if (err?.code === "auth/user-not-found") {
-        message = "No user found with that email.";
-      }
-      setAuthError(message);
-    }
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-  };
-
-  // Load tattoo data once authenticated
-  useEffect(() => {
-    if (!user) return;
-
     async function loadData() {
       try {
         setLoading(true);
@@ -117,7 +73,7 @@ export default function Home() {
       }
     }
     loadData();
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     const filtered = filterTattoos(
@@ -130,71 +86,6 @@ export default function Home() {
     setVisibleCount(60);
   }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
-  // While checking auth state
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mb-4" />
-          <p className="text-white/60 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If not logged in, show login screen only
-  if (!user) {
-  return (
-      <div className="min-h-screen flex items-center justify-center bg-black px-4">
-        <div className="w-full max-w-sm border border-white/10 bg-black/60 p-6 space-y-6">
-          <div className="text-center space-y-1">
-            <h1 className="text-2xl font-light text-white tracking-tight">
-              Sue&apos;s Tattoo Studio
-            </h1>
-            <p className="text-xs text-white/50">
-              Sign in to explore placements, styles, and designs.
-            </p>
-          </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-1">
-              <label className="block text-xs text-white/60">Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white"
-                required
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="block text-xs text-white/60">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white"
-                required
-              />
-            </div>
-            {authError && (
-              <p className="text-xs text-red-400">{authError}</p>
-            )}
-            <button
-              type="submit"
-              className="w-full px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 mt-2"
-            >
-              Sign in
-            </button>
-          </form>
-          <p className="text-[11px] text-white/40 text-center">
-            Use the email/password you configured in Firebase Authentication.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Logged in: show full app
   return (
     <div className="min-h-screen bg-black">
       {/* Subtle background pattern */}
@@ -232,12 +123,6 @@ export default function Home() {
             </p>
           </div>
           <div className="flex-1 flex justify-end">
-            <button
-              onClick={handleLogout}
-              className="text-[11px] md:text-xs text-white/60 hover:text-white underline decoration-white/30"
-            >
-              Sign out
-            </button>
           </div>
         </div>
       </header>

@@ -4,15 +4,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Tattoos collection - stores tattoo images with price and duration estimates
     match /tattoos/{tattooId} {
-      // Allow read for all authenticated users
-      allow read: if request.auth != null;
+      // Allow read for all users (authenticated and unauthenticated)
+      allow read: if true;
       
-      // Allow write for authenticated users (more permissive for Admin SDK)
-      // Admin SDK should bypass rules, but this ensures client SDK works too
-      allow create, update: if request.auth != null;
+      // Allow write for all users (Admin SDK bypasses rules anyway)
+      allow create, update: if true;
       
-      // Allow authenticated users to delete (optional, for cleanup)
-      allow delete: if request.auth != null;
+      // Allow all users to delete (optional, for cleanup)
+      allow delete: if true;
     }
     
     // Deny all other collections by default
