@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Script from "next/script";
 import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
 import {
@@ -85,8 +86,58 @@ export default function Home() {
     setVisibleCount(60);
   }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com';
+  const siteName = "Sue's Tattoo Studio";
+
+  // Structured data for SEO
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteName,
+    url: siteUrl,
+    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more.",
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${siteUrl}/?search={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  const organizationData = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: siteName,
+    url: siteUrl,
+    logo: `${siteUrl}/logo.png`, // Update with your logo URL
+    description: "Professional tattoo design gallery featuring thousands of tattoo styles and placements.",
+    sameAs: [
+      // Add your social media links here when available
+      // "https://www.instagram.com/yourhandle",
+      // "https://www.facebook.com/yourpage",
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-black">
+      {/* Structured Data for SEO */}
+      <Script
+        id="website-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
+      <Script
+        id="organization-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationData),
+        }}
+      />
+      
       {/* Subtle background pattern */}
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_50%)] pointer-events-none" />
       

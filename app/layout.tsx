@@ -14,9 +14,81 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com';
+const siteName = "Sue's Tattoo Studio";
+
 export const metadata: Metadata = {
-  title: "Sue's Tattoo Studio - Find Your Perfect Tattoo",
-  description: "Discover beautiful tattoo designs. Choose your style and body placement to find the perfect tattoo for you.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: `${siteName} - Find Your Perfect Tattoo Design`,
+    template: `%s | ${siteName}`,
+  },
+  description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
+  keywords: [
+    "tattoo designs",
+    "tattoo gallery",
+    "tattoo inspiration",
+    "tattoo styles",
+    "body art",
+    "tattoo placement",
+    "mandala tattoo",
+    "realism tattoo",
+    "traditional tattoo",
+    "tattoo ideas",
+    "tattoo portfolio",
+    "tattoo artist",
+  ],
+  authors: [{ name: siteName }],
+  creator: siteName,
+  publisher: siteName,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: siteName,
+    title: `${siteName} - Find Your Perfect Tattoo Design`,
+    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
+    images: [
+      {
+        url: `${siteUrl}/og-image.jpg`, // You'll need to create this image
+        width: 1200,
+        height: 630,
+        alt: `${siteName} - Tattoo Design Gallery`,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteName} - Find Your Perfect Tattoo Design`,
+    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles and find your perfect tattoo inspiration.",
+    images: [`${siteUrl}/og-image.jpg`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  verification: {
+    // Add your verification codes here when available
+    // google: "your-google-verification-code",
+    // yandex: "your-yandex-verification-code",
+    // bing: "your-bing-verification-code",
+  },
+  manifest: "/manifest.json",
+  other: {
+    "theme-color": "#000000",
+  },
 };
 
 export default function RootLayout({
