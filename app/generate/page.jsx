@@ -25,6 +25,9 @@ const MODELS = [
   { id: "gemini25", label: "Gemini 2.5" },
 ];
 
+// Set to true when ready to enable generation
+const GENERATION_ENABLED = false;
+
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState("imagen4");
@@ -211,7 +214,8 @@ export default function GeneratePage() {
           </div>
         </div>
 
-        <form onSubmit={handleGenerate} className="space-y-6">
+        {GENERATION_ENABLED ? (
+          <form onSubmit={handleGenerate} className="space-y-6">
           {/* Placement selection */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
@@ -514,6 +518,14 @@ export default function GeneratePage() {
             {isGenerating ? "Generating..." : "Generate design"}
           </button>
         </form>
+        ) : (
+          <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
+            <h2 className="text-xl font-light">Coming Soon</h2>
+            <p className="text-sm text-white/60">
+              Tattoo generation will be available soon. Stay tuned!
+            </p>
+          </div>
+        )}
 
         {images && images.length > 0 && (
           <div className="mt-6 space-y-2">

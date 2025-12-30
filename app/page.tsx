@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
 import {
@@ -95,22 +94,6 @@ export default function Home() {
       <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
           <div className="flex-1 flex justify-start gap-2">
-            <Link href="/generate">
-              <button
-                type="button"
-                className="px-3 py-1.5 text-[11px] md:text-xs font-medium text-black bg-white border border-white/20 hover:bg-zinc-200 transition-colors"
-              >
-                Generate Design
-              </button>
-            </Link>
-            <Link href="/history">
-              <button
-                type="button"
-                className="px-3 py-1.5 text-[11px] md:text-xs font-medium text-white border border-white/30 hover:bg-white/10 transition-colors"
-              >
-                History
-              </button>
-            </Link>
           </div>
           <div className="text-center space-y-1">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight">
