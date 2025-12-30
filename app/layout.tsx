@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     default: `${siteName} - Find Your Perfect Tattoo Design`,
     template: `%s | ${siteName}`,
   },
-  description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
+  description: "Discover beautiful tattoo designs. Browse hundreds of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
   keywords: [
     "tattoo designs",
     "tattoo gallery",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: siteName,
     title: `${siteName} - Find Your Perfect Tattoo Design`,
-    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
+    description: "Discover beautiful tattoo designs. Browse hundreds of tattoo styles including mandala, realism, traditional, and more. Filter by body placement, style, and category to find your perfect tattoo inspiration.",
     images: [
       {
         url: `${siteUrl}/og-image.jpg`, // You'll need to create this image
@@ -65,7 +65,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: `${siteName} - Find Your Perfect Tattoo Design`,
-    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles and find your perfect tattoo inspiration.",
+    description: "Discover beautiful tattoo designs. Browse hundreds of tattoo styles and find your perfect tattoo inspiration.",
     images: [`${siteUrl}/og-image.jpg`],
   },
   robots: {

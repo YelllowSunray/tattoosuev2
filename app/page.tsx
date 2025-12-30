@@ -95,7 +95,7 @@ export default function Home() {
     "@type": "WebSite",
     name: siteName,
     url: siteUrl,
-    description: "Discover beautiful tattoo designs. Browse thousands of tattoo styles including mandala, realism, traditional, and more.",
+    description: "Discover beautiful tattoo designs. Browse hundreds of tattoo styles including mandala, realism, traditional, and more.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -112,7 +112,7 @@ export default function Home() {
     name: siteName,
     url: siteUrl,
     logo: `${siteUrl}/logo.png`, // Update with your logo URL
-    description: "Professional tattoo design gallery featuring thousands of tattoo styles and placements.",
+    description: "Professional tattoo design gallery featuring hundreds of tattoo styles and placements.",
     sameAs: [
       // Add your social media links here when available
       // "https://www.instagram.com/yourhandle",

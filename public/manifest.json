@@ -1,7 +1,7 @@
 {
   "name": "Sue's Tattoo Studio",
   "short_name": "Sue's Tattoo",
-  "description": "Discover beautiful tattoo designs. Browse thousands of tattoo styles and find your perfect tattoo inspiration.",
+  "description": "Discover beautiful tattoo designs. Browse hundreds of tattoo styles and find your perfect tattoo inspiration.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
