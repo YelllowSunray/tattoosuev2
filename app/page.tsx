@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import Script from "next/script";
 import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
+import AuthButton from "./components/AuthButton";
 import {
   getAllTattooImages,
   getUniqueBodyParts,
@@ -145,6 +147,18 @@ export default function Home() {
       <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
           <div className="flex-1 flex justify-start gap-2">
+            <Link
+              href="/generate"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+            >
+              Generate
+            </Link>
+            <Link
+              href="/history"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+            >
+              History
+            </Link>
           </div>
           <div className="text-center space-y-1">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight">
@@ -157,6 +171,7 @@ export default function Home() {
             </p>
           </div>
           <div className="flex-1 flex justify-end">
+            <AuthButton />
           </div>
         </div>
       </header>

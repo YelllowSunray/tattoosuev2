@@ -2,21 +2,35 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAllTattooImages, type TattooImage } from "@/lib/firebase-utils";
+import { getUserGeneratedTattoos, type TattooImage } from "@/lib/firebase-utils";
+import { useAuth } from "@/lib/auth-context";
+import AuthButton from "../components/AuthButton";
 
 export default function HistoryPage() {
   const [images, setImages] = useState<TattooImage[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
+      if (authLoading) return;
+      
+      if (!user) {
+        if (!cancelled) {
+          setImages([]);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         setLoading(true);
-        const imgs = await getAllTattooImages("generated");
+        const imgs = await getUserGeneratedTattoos(user.uid);
         if (!cancelled) setImages(imgs);
       } catch (err) {
         console.error("Failed to load generated tattoos:", err);
+        if (!cancelled) setImages([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -25,7 +39,7 @@ export default function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [user, authLoading]);
 
   return (
     <div className="min-h-screen bg-black text-white px-4 py-10">
@@ -36,10 +50,12 @@ export default function HistoryPage() {
               Previously Generated Tattoos
             </h1>
             <p className="text-xs sm:text-sm text-white/60">
-              These are tattoos generated via the AI on this site.
+              {user 
+                ? "Your previously generated tattoos"
+                : "Sign in to view your generated tattoos"}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <Link
               href="/"
               className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
@@ -52,20 +68,28 @@ export default function HistoryPage() {
             >
               Generate more
             </Link>
+            <AuthButton />
           </div>
         </div>
 
-        {loading ? (
+        {loading || authLoading ? (
           <div className="flex items-center justify-center min-h-[50vh]">
             <div className="text-center">
               <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mb-4" />
               <p className="text-white/60 text-sm">Loading generated tattoos...</p>
             </div>
           </div>
+        ) : !user ? (
+          <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-3">
+            <p className="text-white/70 text-sm">
+              Please sign in to view your generated tattoos.
+            </p>
+            <AuthButton />
+          </div>
         ) : images.length === 0 ? (
           <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-3">
             <p className="text-white/70 text-sm">
-              You haven&apos;t saved any generated tattoos yet.
+              You haven&apos;t generated any tattoos yet.
             </p>
             <Link
               href="/generate"

@@ -203,3 +203,58 @@ export function getAlternatives(
   return [...sameStyle, ...sameCategory, ...sameBodyPart].slice(0, limit);
 }
 
+/**
+ * Fetches generated tattoo images for a specific user
+ * @param userId - User ID to fetch images for
+ */
+export async function getUserGeneratedTattoos(userId: string): Promise<TattooImage[]> {
+  try {
+    const userPath = `generated/${userId}/`;
+    const imagesRef = ref(storage, userPath);
+    const result = await listAll(imagesRef);
+    
+    if (result.items.length === 0) {
+      return [];
+    }
+    
+    const imagePromises: Promise<TattooImage | null>[] = result.items.map(async (itemRef) => {
+      try {
+        const url = await getDownloadURL(itemRef);
+        const fileName = itemRef.name;
+        
+        const image: TattooImage = {
+          url,
+          style: '', // Generated images don't have style/bodyPart in filename
+          bodyPart: '',
+          fileName,
+        };
+        
+        return image;
+      } catch (error) {
+        console.error(`Error processing image ${itemRef.name}:`, error);
+        return null;
+      }
+    });
+    
+    const images = await Promise.all(imagePromises);
+    const validImages = images.filter((img): img is TattooImage => img !== null);
+    
+    // Sort by timestamp extracted from filename (most recent first)
+    // Filename format: {timestamp}-{idx}.png
+    validImages.sort((a, b) => {
+      const timestampA = parseInt(a.fileName.split('-')[0]) || 0;
+      const timestampB = parseInt(b.fileName.split('-')[0]) || 0;
+      return timestampB - timestampA; // Descending order (newest first)
+    });
+    
+    return validImages;
+  } catch (error: any) {
+    if (error?.code === 'storage/object-not-found' || error?.code === 'storage/unauthorized') {
+      // User folder doesn't exist yet or no access - return empty array
+      return [];
+    }
+    console.error('Error fetching user generated tattoos:', error);
+    return [];
+  }
+}
+

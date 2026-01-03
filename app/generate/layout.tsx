@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     description: "Generate custom tattoo designs using AI. Create unique tattoo designs with multiple AI models.",
   },
   robots: {
-    index: false, // Set to true when generation is enabled
+    index: true, // Generation is now enabled
     follow: true,
   },
 };

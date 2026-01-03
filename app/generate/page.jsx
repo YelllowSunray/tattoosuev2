@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { TATTOO_CATEGORIES } from "@/lib/tattoo-categories";
 import { storage } from "@/lib/firebase";
 import { ref, uploadString } from "firebase/storage";
+import { useAuth } from "@/lib/auth-context";
+import AuthButton from "../components/AuthButton";
 
 const PLACEMENTS = [
   "Arm",
@@ -26,7 +28,7 @@ const MODELS = [
 ];
 
 // Set to true when ready to enable generation
-const GENERATION_ENABLED = false;
+const GENERATION_ENABLED = true;
 
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
@@ -40,6 +42,9 @@ export default function GeneratePage() {
   const [selectedPlacements, setSelectedPlacements] = useState([]);
   const [referenceImages, setReferenceImages] = useState([]);
   const [referenceImageType, setReferenceImageType] = useState("placement"); // "placement" or "subject"
+  const [styleSearchQuery, setStyleSearchQuery] = useState("");
+  const [showStyleSearchResults, setShowStyleSearchResults] = useState(false);
+  const { user } = useAuth();
 
   const handlePortraitChange = (e) => {
     const files = e.target.files;
@@ -76,6 +81,47 @@ export default function GeneratePage() {
   const removeReferenceImage = (index) => {
     setReferenceImages((prev) => prev.filter((_, i) => i !== index));
   };
+
+  // Get all styles flattened with their category info
+  const getAllStyles = () => {
+    return TATTOO_CATEGORIES.flatMap((cat) =>
+      (cat.styles || []).map((style) => ({ style, category: cat }))
+    );
+  };
+
+  // Filter styles based on search query
+  const getFilteredStyles = () => {
+    if (!styleSearchQuery.trim()) return [];
+    const query = styleSearchQuery.toLowerCase().trim();
+    return getAllStyles().filter(
+      (item) =>
+        item.style.name.toLowerCase().includes(query) ||
+        item.style.keywords.some((kw) => kw.toLowerCase().includes(query)) ||
+        item.category.name.toLowerCase().includes(query)
+    );
+  };
+
+  const handleStyleSearchSelect = (styleId) => {
+    if (!selectedStyleIds.includes(styleId)) {
+      setSelectedStyleIds((prev) => [...prev, styleId]);
+    }
+    setStyleSearchQuery("");
+    setShowStyleSearchResults(false);
+  };
+
+  // Close dropdown when clicking outside
+  const styleSearchRef = useRef(null);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (styleSearchRef.current && !styleSearchRef.current.contains(event.target)) {
+        setShowStyleSearchResults(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -166,11 +212,13 @@ export default function GeneratePage() {
         setImages(data.images);
         setResultText(`Generated ${data.images.length} image(s) with ${selectedModel}.`);
 
-        // Fire-and-forget save to Firebase Storage under generated/
+        // Fire-and-forget save to Firebase Storage under generated/{userId}/
+        // If user is logged in, save to their folder; otherwise save to anonymous folder
         const timestamp = Date.now();
+        const userId = user?.uid || "anonymous";
         data.images.forEach((img, idx) => {
           if (typeof img !== "string" || !img.startsWith("data:")) return;
-          const path = `generated/${timestamp}-${idx}.png`;
+          const path = `generated/${userId}/${timestamp}-${idx}.png`;
           const storageRef = ref(storage, path);
           uploadString(storageRef, img, "data_url").catch((err) => {
             console.error("Failed to save generated image to Firebase:", err);
@@ -199,18 +247,21 @@ export default function GeneratePage() {
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
-            <Link
-              href="/"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-            >
-              ← Back to gallery
-            </Link>
-            <Link
-              href="/history"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-            >
-              History
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+              >
+                ← Back to gallery
+              </Link>
+              <Link
+                href="/history"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+              >
+                History
+              </Link>
+              <AuthButton />
+            </div>
           </div>
         </div>
 
@@ -248,74 +299,141 @@ export default function GeneratePage() {
           </div>
           </div>
 
-          {/* Category + style selection */}
+          {/* Style selection with search */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
               Style (optional)
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <select
-                value={selectedCategoryId ?? ""}
+            
+            {/* Style Search */}
+            <div className="relative" ref={styleSearchRef}>
+              <input
+                type="text"
+                value={styleSearchQuery}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  const id = val ? Number(val) : null;
-                  setSelectedCategoryId(id);
-                  setCurrentStyleId("");
+                  setStyleSearchQuery(e.target.value);
+                  setShowStyleSearchResults(true);
                 }}
-                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
-              >
-                <option value="">All categories</option>
-                {TATTOO_CATEGORIES.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-
-              <div className="flex items-center gap-2">
-                <select
-                  value={currentStyleId}
-                  onChange={(e) => setCurrentStyleId(e.target.value)}
-                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
-                  disabled={!selectedCategoryId}
-                >
-                  <option value="">
-                    {selectedCategoryId
-                      ? "Select a style"
-                      : "Select a category first"}
-                  </option>
-                  {selectedCategoryId &&
-                    TATTOO_CATEGORIES.find(
-                      (c) => c.id === selectedCategoryId
-                    )?.styles.map((style) => (
-                      <option key={style.id} value={style.id}>
-                        {style.name}
-                      </option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!currentStyleId) return;
-                    const id = Number(currentStyleId);
-                    setSelectedStyleIds((prev) =>
-                      prev.includes(id) ? prev : [...prev, id]
-                    );
-                    setCurrentStyleId("");
-                  }}
-                  disabled={
-                    !selectedCategoryId ||
-                    !currentStyleId ||
-                    selectedStyleIds.includes(Number(currentStyleId))
+                onFocus={() => {
+                  if (styleSearchQuery.trim()) {
+                    setShowStyleSearchResults(true);
                   }
-                  className="px-2 py-1 text-xs border border-white/40 rounded-full text-white hover:bg-white hover:text-black disabled:opacity-40 disabled:cursor-not-allowed"
-                  aria-label="Add style"
-                >
-                  +
-                </button>
-              </div>
+                }}
+                placeholder="Search styles (e.g., 'realism', 'mandala', 'minimalist')"
+                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+              />
+              
+              {/* Search Results Dropdown */}
+              {showStyleSearchResults && styleSearchQuery.trim() && (
+                <div className="absolute z-50 w-full mt-1 bg-black border border-white/30 max-h-60 overflow-y-auto">
+                  {getFilteredStyles().length > 0 ? (
+                    <div className="p-2 space-y-1">
+                      {getFilteredStyles().map((item) => {
+                        const isSelected = selectedStyleIds.includes(item.style.id);
+                        return (
+                          <button
+                            key={item.style.id}
+                            type="button"
+                            onClick={() => handleStyleSearchSelect(item.style.id)}
+                            disabled={isSelected}
+                            className={`w-full text-left px-3 py-2 text-xs sm:text-sm transition-colors ${
+                              isSelected
+                                ? "bg-white/20 text-white/50 cursor-not-allowed"
+                                : "text-white/80 hover:bg-white/10 hover:text-white"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{item.style.name}</span>
+                              {isSelected && (
+                                <span className="text-white/40 text-[10px]">Added</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-white/40 mt-0.5">
+                              {item.category.name}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-3 text-xs text-white/50 text-center">
+                      No styles found matching &quot;{styleSearchQuery}&quot;
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
+            {/* Alternative: Category-based selection */}
+            <details className="mt-2">
+              <summary className="text-xs text-white/50 cursor-pointer hover:text-white/70 mb-2">
+                Or select by category
+              </summary>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                <select
+                  value={selectedCategoryId ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const id = val ? Number(val) : null;
+                    setSelectedCategoryId(id);
+                    setCurrentStyleId("");
+                  }}
+                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                >
+                  <option value="">All categories</option>
+                  {TATTOO_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="flex items-center gap-2">
+                  <select
+                    value={currentStyleId}
+                    onChange={(e) => setCurrentStyleId(e.target.value)}
+                    className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                    disabled={!selectedCategoryId}
+                  >
+                    <option value="">
+                      {selectedCategoryId
+                        ? "Select a style"
+                        : "Select a category first"}
+                    </option>
+                    {selectedCategoryId &&
+                      TATTOO_CATEGORIES.find(
+                        (c) => c.id === selectedCategoryId
+                      )?.styles.map((style) => (
+                        <option key={style.id} value={style.id}>
+                          {style.name}
+                        </option>
+                      ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!currentStyleId) return;
+                      const id = Number(currentStyleId);
+                      setSelectedStyleIds((prev) =>
+                        prev.includes(id) ? prev : [...prev, id]
+                      );
+                      setCurrentStyleId("");
+                    }}
+                    disabled={
+                      !selectedCategoryId ||
+                      !currentStyleId ||
+                      selectedStyleIds.includes(Number(currentStyleId))
+                    }
+                    className="px-2 py-1 text-xs border border-white/40 rounded-full text-white hover:bg-white hover:text-black disabled:opacity-40 disabled:cursor-not-allowed"
+                    aria-label="Add style"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </details>
+
+            {/* Selected Styles */}
             {selectedStyleIds.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-2">
                 {selectedStyleIds.map((id) => {
