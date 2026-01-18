@@ -69,52 +69,15 @@ export default function TattooGallery({ images, allImages, showPriceDuration = t
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                {image.matchedStyle && onStyleClick ? (
-                  <p 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onStyleClick(image.matchedStyle!.id);
-                      setSelectedImage(null);
-                    }}
-                    className="text-white text-sm font-light mb-1 tracking-wide hover:text-white/80 cursor-pointer transition-colors"
-                  >
-                    {getDisplayName(image)}
-                  </p>
-                ) : (
-                  <p className="text-white text-sm font-light mb-1 tracking-wide">
-                    {getDisplayName(image)}
-                  </p>
-                )}
-                {image.category && onCategoryClick ? (
-                  <p 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCategoryClick(image.category!.id);
-                      setSelectedImage(null);
-                    }}
-                    className="text-white/50 text-xs font-light mb-1 tracking-wide hover:text-white/70 cursor-pointer transition-colors"
-                  >
-                    {image.category.name}
-                  </p>
-                ) : image.category ? (
+                <p className="text-white text-sm font-light mb-1 tracking-wide">
+                  {getDisplayName(image)}
+                </p>
+                {image.category && (
                   <p className="text-white/50 text-xs font-light mb-1 tracking-wide">
                     {image.category.name}
                   </p>
-                ) : null}
-                {onBodyPartClick ? (
-                  <p 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onBodyPartClick(image.bodyPart);
-                      setSelectedImage(null);
-                    }}
-                    className="text-white/60 text-xs font-light capitalize tracking-wide mb-2 hover:text-white/80 cursor-pointer transition-colors"
-                  >
-                    {image.bodyPart}
-                  </p>
-                ) : (
-                  <p className="text-white/60 text-xs font-light capitalize tracking-wide mb-2">{image.bodyPart}</p>
                 )}
+                <p className="text-white/60 text-xs font-light capitalize tracking-wide mb-2">{image.bodyPart}</p>
                 {showPriceDuration && (image.price !== undefined || image.duration !== undefined) && (
                   <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/10">
                     {image.price !== undefined && (

@@ -116,18 +116,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           <div className="pt-4 border-t border-white/10">
             <p className="text-sm text-white/60 text-center">
               {isSignUp ? "Already have an account? " : "Don't have an account? "}
-              <button
+            <button
                 type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setError("");
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError("");
                   setEmail("");
                   setPassword("");
-                }}
+              }}
                 className="text-white underline hover:text-white/80 transition-colors"
-              >
+            >
                 {isSignUp ? "Sign In" : "Create Account"}
-              </button>
+            </button>
             </p>
           </div>
         </div>

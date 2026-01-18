@@ -370,7 +370,7 @@ export default function AdminPage() {
               You need to sign in to access the admin panel.
             </p>
             <AuthButton />
-          </div>
+            </div>
         ) : (
           <>
             {/* User Statistics */}
@@ -379,13 +379,13 @@ export default function AdminPage() {
                 <div className="border border-white/10 bg-black/60 p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-light">Filters</h2>
-                    <button
+                <button
                       onClick={() => setShowMonthlyView(!showMonthlyView)}
                       className="text-xs text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full transition-colors"
-                    >
+                >
                       {showMonthlyView ? "Show Summary" : "Show Monthly View"}
-                    </button>
-                  </div>
+                </button>
+              </div>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
                       <label className="text-sm text-white/60">Year:</label>
@@ -413,20 +413,20 @@ export default function AdminPage() {
                           <option key={month} value={month}>{monthNames[month - 1]}</option>
                         ))}
                       </select>
-                    </div>
+            </div>
                     {(selectedYear !== null || selectedMonth !== null) && (
-                      <button
+            <button
                         onClick={() => {
                           setSelectedYear(null);
                           setSelectedMonth(null);
                         }}
                         className="text-xs text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full transition-colors"
-                      >
+            >
                         Clear Filters
-                      </button>
+            </button>
                     )}
                   </div>
-                </div>
+          </div>
 
                 {/* Summary Cards */}
                 {totalStats && (
@@ -453,8 +453,8 @@ export default function AdminPage() {
                       </div>
                       <div className="text-2xl font-light text-white">
                         {totalStats.totalImages}
-                      </div>
-                    </div>
+              </div>
+            </div>
                     <div className="border border-white/10 bg-black/60 p-4">
                       <div className="text-xs text-white/60 uppercase tracking-[0.16em] mb-1">
                         Total Customers
@@ -462,9 +462,9 @@ export default function AdminPage() {
                       <div className="text-2xl font-light text-white">
                         {totalStats.totalCustomers}
                       </div>
-                    </div>
-                  </div>
-                )}
+              </div>
+            </div>
+          )}
 
                 {/* User Stats Table */}
                 <div className="border border-white/10 bg-black/60 p-6">
@@ -482,8 +482,8 @@ export default function AdminPage() {
                   {statsError && (
                     <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 text-red-200 text-sm">
                       {statsError}
-                    </div>
-                  )}
+            </div>
+          )}
 
                   {statsLoading ? (
                     <div className="text-center py-12">
@@ -494,8 +494,8 @@ export default function AdminPage() {
                     <div className="text-center py-12">
                       <p className="text-white/60 text-sm">
                         No user statistics available yet. Users will appear here after they generate images.
-                      </p>
-                    </div>
+              </p>
+            </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left">
@@ -684,8 +684,8 @@ export default function AdminPage() {
                                                   ) : (
                                                     <div className="flex items-center justify-center h-full text-xs text-white/40">
                                                       Loading...
-                                                    </div>
-                                                  )}
+                          </div>
+                        )}
                                                 </div>
                                               );
                                             })}
@@ -693,21 +693,21 @@ export default function AdminPage() {
                                         ) : (
                                           <div className="text-xs text-white/40 italic">
                                             No images available for this generation
-                                          </div>
-                                        )}
-                                      </div>
+                      </div>
+                    )}
+                  </div>
                                     ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                    </div>
+                  )}
+                </div>
+              ))}
                           </div>
                         )}
                       </div>
                     ) : null}
                   </div>
-                </div>
-              </div>
+            </div>
+          </div>
             )}
           </>
         )}
