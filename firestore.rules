@@ -14,6 +14,36 @@ service cloud.firestore {
       allow delete: if true;
     }
     
+    // Users collection - stores user subscription and payment info
+    match /users/{userId} {
+      // Users can only read their own document
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Only server-side (Admin SDK) can write user documents
+      // Client-side writes are handled via API routes
+      allow write: if false;
+    }
+    
+    // CRM: Customers collection - stores customer information
+    match /customers/{customerId} {
+      // Users can only read their own customers
+      allow read: if request.auth != null && resource.data.createdBy == request.auth.uid;
+      
+      // Only server-side (Admin SDK) can write customer documents
+      // Client-side writes are handled via API routes
+      allow write: if false;
+    }
+    
+    // CRM: Generations collection - tracks generated tattoo designs per customer
+    match /generations/{generationId} {
+      // Users can only read their own generations
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Only server-side (Admin SDK) can write generation documents
+      // Client-side writes are handled via API routes
+      allow write: if false;
+    }
+    
     // Deny all other collections by default
     match /{document=**} {
       allow read, write: if false;

@@ -7,6 +7,7 @@ import { storage } from "@/lib/firebase";
 import { ref, uploadString } from "firebase/storage";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
+import CustomerSelector from "../components/CustomerSelector";
 
 const PLACEMENTS = [
   "Arm",
@@ -22,9 +23,9 @@ const PLACEMENTS = [
 ];
 
 const MODELS = [
-  { id: "imagen4", label: "Imagen 4" },
   { id: "nanobanana", label: "NanoBanana" },
   { id: "gemini25", label: "Gemini 2.5" },
+  { id: "imagen4", label: "Imagen 4" },
 ];
 
 // Set to true when ready to enable generation
@@ -32,7 +33,7 @@ const GENERATION_ENABLED = true;
 
 export default function GeneratePage() {
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState("imagen4");
+  const [selectedModel, setSelectedModel] = useState("nanobanana");
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultText, setResultText] = useState("");
   const [images, setImages] = useState(null);
@@ -44,7 +45,8 @@ export default function GeneratePage() {
   const [referenceImageType, setReferenceImageType] = useState("placement"); // "placement" or "subject"
   const [styleSearchQuery, setStyleSearchQuery] = useState("");
   const [showStyleSearchResults, setShowStyleSearchResults] = useState(false);
-  const { user } = useAuth();
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const { user, loading: authLoading } = useAuth();
 
   const handlePortraitChange = (e) => {
     const files = e.target.files;
@@ -126,6 +128,18 @@ export default function GeneratePage() {
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!prompt.trim()) return;
+    
+    // Require authentication to generate
+    if (!user) {
+      setResultText("Please sign in to generate images.");
+      return;
+    }
+    
+    // Require customer selection
+    if (!selectedCustomerId) {
+      setResultText("Please select a customer before generating.");
+      return;
+    }
 
     setIsGenerating(true);
     setResultText("");
@@ -212,18 +226,119 @@ export default function GeneratePage() {
         setImages(data.images);
         setResultText(`Generated ${data.images.length} image(s) with ${selectedModel}.`);
 
-        // Fire-and-forget save to Firebase Storage under generated/{userId}/
-        // If user is logged in, save to their folder; otherwise save to anonymous folder
+        // Save to Firebase Storage under generated/{userId}/
         const timestamp = Date.now();
-        const userId = user?.uid || "anonymous";
-        data.images.forEach((img, idx) => {
-          if (typeof img !== "string" || !img.startsWith("data:")) return;
+        const userId = user.uid; // user is guaranteed to exist here
+        const imagePaths = [];
+        
+        console.log("Starting image upload, total images:", data.images.length);
+        
+        // Upload images and collect paths
+        // Note: We don't store base64 data URLs in Firestore due to size limits (~1MB per array)
+        const uploadPromises = data.images.map(async (img, idx) => {
+          if (typeof img !== "string" || !img.startsWith("data:")) {
+            console.warn(`Skipping image ${idx}: invalid format`);
+            return;
+          }
           const path = `generated/${userId}/${timestamp}-${idx}.png`;
           const storageRef = ref(storage, path);
-          uploadString(storageRef, img, "data_url").catch((err) => {
-            console.error("Failed to save generated image to Firebase:", err);
-          });
+          try {
+            await uploadString(storageRef, img, "data_url");
+            imagePaths.push(path);
+            console.log(`Successfully uploaded image ${idx} to ${path}`);
+          } catch (err) {
+            console.error(`Failed to save generated image ${idx} to Firebase:`, err);
+          }
         });
+        
+        await Promise.all(uploadPromises);
+        
+        console.log("Upload complete. imagePaths:", imagePaths.length);
+        
+        // Only save generation metadata if we successfully uploaded at least one image
+        if (imagePaths.length > 0) {
+          // Save generation metadata to Firestore
+          // Note: We don't store imageUrls (base64 data) in Firestore due to size limits
+          // Only store the Firebase Storage paths - download URLs can be generated when needed
+          try {
+            // Don't store full base64 referenceImages data - it's too large and causes stack overflow
+            // Only store metadata (file names, types) if needed for reference
+            const generationData = {
+              customerId: selectedCustomerId,
+              userId: user.uid,
+              prompt: prompt.trim(),
+              fullPrompt: fullPrompt,
+              model: selectedModel,
+              images: imagePaths, // Firebase Storage paths only
+              imageUrls: [], // Empty - we don't store base64 data in Firestore
+              styleIds: selectedStyleIds.length > 0 ? selectedStyleIds : undefined,
+              placements: selectedPlacements.length > 0 ? selectedPlacements : undefined,
+              // Store only metadata about reference images, not the full base64 data
+              // This prevents stack overflow when serializing large base64 strings
+              referenceImages: (selectedModel === "nanobanana" || selectedModel === "gemini25") && referenceImages.length > 0 
+                ? referenceImages.map(img => ({
+                    fileName: img.fileName || "reference-image",
+                    mimeType: img.mimeType || "image/png",
+                    type: img.type || "placement",
+                    // Don't include img.data - it's too large and causes stack overflow
+                  }))
+                : undefined,
+            };
+            
+            console.log("Saving generation metadata with:", {
+              customerId: generationData.customerId,
+              userId: generationData.userId,
+              imagesCount: generationData.images.length,
+            });
+            
+            // Get Firebase Auth token for the API request
+            const token = await user.getIdToken();
+            
+            // Validate payload size before stringifying to prevent stack overflow
+            let requestBody;
+            try {
+              requestBody = JSON.stringify(generationData);
+              const sizeInMB = new Blob([requestBody]).size / (1024 * 1024);
+              if (sizeInMB > 4) {
+                console.warn(`Request body is large (${sizeInMB.toFixed(2)}MB), but proceeding...`);
+              }
+            } catch (stringifyError) {
+              console.error("Error stringifying generation data:", stringifyError);
+              // If stringify fails, try without referenceImages
+              const fallbackData = { ...generationData };
+              delete fallbackData.referenceImages;
+              requestBody = JSON.stringify(fallbackData);
+              console.log("Retried without referenceImages metadata");
+            }
+            
+            const generationRes = await fetch("/api/generations", {
+              method: "POST",
+              headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+              },
+              body: requestBody,
+            });
+            
+            if (!generationRes.ok) {
+              const errorText = await generationRes.text();
+              let errorData = {};
+              try {
+                errorData = JSON.parse(errorText);
+              } catch (e) {
+                errorData = { rawError: errorText };
+              }
+              console.error("Failed to save generation metadata. Status:", generationRes.status, "Error:", errorData);
+            } else {
+              const successData = await generationRes.json();
+              console.log("Successfully saved generation metadata:", successData);
+            }
+          } catch (err) {
+            console.error("Error saving generation metadata:", err);
+          }
+        } else {
+          console.error("No images were successfully uploaded, skipping generation metadata save. imagePaths:", imagePaths.length);
+        }
       } else {
         setResultText("No image returned from the server.");
       }
@@ -255,10 +370,10 @@ export default function GeneratePage() {
                 ← Back to gallery
               </Link>
               <Link
-                href="/history"
+                href="/customers"
                 className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
               >
-                History
+                Customers
               </Link>
               <AuthButton />
             </div>
@@ -266,7 +381,29 @@ export default function GeneratePage() {
         </div>
 
         {GENERATION_ENABLED ? (
+          authLoading ? (
+            <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mx-auto" />
+              <p className="text-sm text-white/60">Loading...</p>
+            </div>
+          ) : !user ? (
+            <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
+              <h2 className="text-xl font-light">Sign in Required</h2>
+              <p className="text-sm text-white/60">
+                You need to sign in to generate tattoo designs.
+              </p>
+              <div className="pt-2">
+                <AuthButton />
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleGenerate} className="space-y-6">
+          {/* Customer Selection */}
+          <CustomerSelector
+            selectedCustomerId={selectedCustomerId}
+            onSelectCustomer={setSelectedCustomerId}
+          />
+          
           {/* Placement selection */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
@@ -630,12 +767,13 @@ export default function GeneratePage() {
 
           <button
             type="submit"
-            disabled={isGenerating || !prompt.trim()}
+            disabled={isGenerating || !prompt.trim() || !selectedCustomerId}
             className="w-full sm:w-auto px-5 py-2 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed"
           >
             {isGenerating ? "Generating..." : "Generate design"}
           </button>
         </form>
+          )
         ) : (
           <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
             <h2 className="text-xl font-light">Coming Soon</h2>

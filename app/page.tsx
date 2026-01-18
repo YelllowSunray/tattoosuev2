@@ -148,6 +148,12 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
           <div className="flex-1 flex justify-start gap-2">
             <Link
+              href="/customers"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+            >
+              Customers
+            </Link>
+            <Link
               href="/generate"
               className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
             >

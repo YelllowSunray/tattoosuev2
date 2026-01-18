@@ -10,12 +10,12 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const { signIn, signUp } = useAuth();
 
   useEffect(() => {
@@ -38,6 +38,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       onClose();
       setEmail("");
       setPassword("");
+      setIsSignUp(false);
     } catch (err: any) {
       setError(err.message || "An error occurred");
     } finally {
@@ -63,7 +64,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </h2>
             <p className="text-sm text-white/60">
               {isSignUp
-                ? "Create an account to save your generated tattoos"
+                ? "Create an account to save and manage your tattoos"
                 : "Sign in to access your saved tattoos"}
             </p>
           </div>
@@ -98,7 +99,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
                 className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white"
                 placeholder="••••••"
               />
@@ -109,22 +109,26 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               disabled={loading}
               className="w-full px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed"
             >
-              {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
+              {loading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
             </button>
           </form>
 
-          <div className="text-center">
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError("");
-              }}
-              className="text-sm text-white/60 hover:text-white"
-            >
-              {isSignUp
-                ? "Already have an account? Sign in"
-                : "Don't have an account? Sign up"}
-            </button>
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-sm text-white/60 text-center">
+              {isSignUp ? "Already have an account? " : "Don't have an account? "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setError("");
+                  setEmail("");
+                  setPassword("");
+                }}
+                className="text-white underline hover:text-white/80 transition-colors"
+              >
+                {isSignUp ? "Sign In" : "Create Account"}
+              </button>
+            </p>
           </div>
         </div>
       </div>

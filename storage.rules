@@ -1,0 +1,23 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Generated images folder - allow users to upload and read their own images
+    match /generated/{userId}/{fileName} {
+      // Allow public read access to all generated images
+      allow read: if true;
+      
+      // Allow users to write to their own folder (including anonymous)
+      // This allows both authenticated users and anonymous uploads
+      allow write: if true;
+    }
+    
+    // All other paths - allow public read, deny writes by default
+    match /{path=**} {
+      // Allow public read access for all other files
+      allow read: if true;
+      
+      // Deny writes to other paths
+      allow write: if false;
+    }
+  }
+}

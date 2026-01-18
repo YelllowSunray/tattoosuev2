@@ -1,11 +1,15 @@
 import { initializeApp, getApps, cert, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
+import { getAuth, type Auth } from 'firebase-admin/auth';
+import { getStorage, type Storage } from 'firebase-admin/storage';
 import { parseServiceAccountJson } from './service-account-parser';
 
 let adminApp: App | null = null;
 let adminDb: Firestore | null = null;
+let adminAuth: Auth | null = null;
+let adminStorage: Storage | null = null;
 
-function getAdminApp(): App {
+export function getAdminApp(): App {
   if (adminApp) {
     return adminApp;
   }
@@ -57,3 +61,20 @@ export function getAdminFirestore(): Firestore {
   return adminDb;
 }
 
+export function getAdminAuth(): Auth {
+  if (adminAuth) {
+    return adminAuth;
+  }
+  const app = getAdminApp();
+  adminAuth = getAuth(app);
+  return adminAuth;
+}
+
+export function getAdminStorage(): Storage {
+  if (adminStorage) {
+    return adminStorage;
+  }
+  const app = getAdminApp();
+  adminStorage = getStorage(app);
+  return adminStorage;
+}
