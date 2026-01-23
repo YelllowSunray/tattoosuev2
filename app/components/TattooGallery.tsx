@@ -11,13 +11,21 @@ interface TattooGalleryProps {
   onStyleClick?: (styleId: number) => void;
   onCategoryClick?: (categoryId: number) => void;
   onBodyPartClick?: (bodyPart: string) => void;
+  favoriteStyleIds?: number[]; // Optional: array of favorited style IDs for visual feedback
+  onImageClick?: (image: TattooImage) => void; // Optional: custom handler for image clicks (overrides default modal)
 }
 
-export default function TattooGallery({ images, allImages, showPriceDuration = true, onStyleClick, onCategoryClick, onBodyPartClick }: TattooGalleryProps) {
+export default function TattooGallery({ images, allImages, showPriceDuration = true, onStyleClick, onCategoryClick, onBodyPartClick, favoriteStyleIds = [], onImageClick }: TattooGalleryProps) {
   const [selectedImage, setSelectedImage] = useState<TattooImage | null>(null);
   const [alternatives, setAlternatives] = useState<TattooImage[]>([]);
 
   const handleImageClick = (image: TattooImage) => {
+    // If custom onImageClick handler is provided, use it instead of opening modal
+    if (onImageClick) {
+      onImageClick(image);
+      return;
+    }
+    // Default behavior: open modal
     setSelectedImage(image);
     const altImages = getAlternatives(allImages, image, 8);
     setAlternatives(altImages);
@@ -50,11 +58,17 @@ export default function TattooGallery({ images, allImages, showPriceDuration = t
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {images.map((image) => (
+        {images.map((image) => {
+          const isFavorited = image.matchedStyle && favoriteStyleIds.includes(image.matchedStyle.id);
+          return (
           <div
             key={image.fileName}
             onClick={() => handleImageClick(image)}
-            className="group relative aspect-square overflow-hidden cursor-pointer border border-white/5 hover:border-white/10 transition-all duration-500"
+            className={`group relative aspect-square overflow-hidden cursor-pointer border transition-all duration-500 ${
+              isFavorited 
+                ? "border-white/40 ring-2 ring-white/20" 
+                : "border-white/5 hover:border-white/10"
+            }`}
           >
             <Image
               src={image.url}
@@ -69,15 +83,15 @@ export default function TattooGallery({ images, allImages, showPriceDuration = t
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500">
               <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="text-white text-sm font-light mb-1 tracking-wide">
-                  {getDisplayName(image)}
-                </p>
+                  <p className="text-white text-sm font-light mb-1 tracking-wide">
+                    {getDisplayName(image)}
+                  </p>
                 {image.category && (
                   <p className="text-white/50 text-xs font-light mb-1 tracking-wide">
                     {image.category.name}
                   </p>
                 )}
-                <p className="text-white/60 text-xs font-light capitalize tracking-wide mb-2">{image.bodyPart}</p>
+                  <p className="text-white/60 text-xs font-light capitalize tracking-wide mb-2">{image.bodyPart}</p>
                 {showPriceDuration && (image.price !== undefined || image.duration !== undefined) && (
                   <div className="flex items-center gap-3 mt-2 pt-2 border-t border-white/10">
                     {image.price !== undefined && (
@@ -94,8 +108,14 @@ export default function TattooGallery({ images, allImages, showPriceDuration = t
                 )}
               </div>
             </div>
+            {isFavorited && (
+              <div className="absolute top-2 right-2 bg-white text-black px-2 py-1 text-[10px] font-medium rounded">
+                ✓ Favorited
+              </div>
+            )}
           </div>
-        ))}
+        );
+        })}
       </div>
 
       {/* Modal for selected image and alternatives */}

@@ -157,13 +157,29 @@ export function filterTattoos(
   images: TattooImage[],
   selectedCategoryId?: number,
   selectedStyleId?: number,
-  selectedBodyPart?: string
+  selectedBodyPart?: string,
+  searchQuery?: string
 ): TattooImage[] {
   return images.filter((img) => {
     const categoryMatch = !selectedCategoryId || img.category?.id === selectedCategoryId;
     const styleMatch = !selectedStyleId || img.matchedStyle?.id === selectedStyleId;
     const bodyPartMatch = !selectedBodyPart || img.bodyPart === selectedBodyPart;
-    return categoryMatch && styleMatch && bodyPartMatch;
+    
+    // Search filter: match against style name, category name, or body part
+    let searchMatch = true;
+    if (searchQuery && searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      const styleName = img.matchedStyle?.name?.toLowerCase() || img.style?.toLowerCase() || "";
+      const categoryName = img.category?.name?.toLowerCase() || "";
+      const bodyPartName = img.bodyPart?.toLowerCase() || "";
+      
+      searchMatch = 
+        styleName.includes(query) ||
+        categoryName.includes(query) ||
+        bodyPartName.includes(query);
+    }
+    
+    return categoryMatch && styleMatch && bodyPartMatch && searchMatch;
   });
 }
 

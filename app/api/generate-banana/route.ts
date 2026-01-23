@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleAuth, type JWTInput } from "google-auth-library";
 import { parseServiceAccountJson } from "@/lib/service-account-parser";
+import { requireAuth } from "@/lib/auth-helpers";
+import { getUserCredits, deductCredits, CREDIT_COSTS } from "@/lib/credit-utils";
 
 // Gemini / NanoBanana image model to use via Vertex / OAuth, NOT Imagen4.
 // Example values (you must ensure the model exists and supports images):
@@ -37,15 +39,19 @@ async function getAccessToken(): Promise<string> {
 async function generateBananaImages(
   prompt: string,
   referenceImages?: Array<{ data: string; mimeType?: string; type?: string }>,
-  referenceImageType?: string
+  referenceImageType?: string,
+  numberOfImages: number = 4
 ): Promise<string[]> {
   const accessToken = await getAccessToken();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${BANANA_VERTEX_MODEL_ID}:generateContent`;
 
   const images: string[] = [];
 
-  // Call the API 4 times sequentially to get 4 images
-  for (let i = 0; i < 4; i++) {
+  // Validate numberOfImages (must be between 1 and 4)
+  const numImages = Math.max(1, Math.min(4, Math.floor(numberOfImages) || 4));
+
+  // Call the API the specified number of times sequentially
+  for (let i = 0; i < numImages; i++) {
     // Build the request body with optional reference images
     const parts: any[] = [];
     
@@ -77,7 +83,7 @@ async function generateBananaImages(
       parts.push({ text: prompt });
     }
     
-    console.log(`🎨 Generation ${i + 1}/4 - Prompt length: ${prompt.length} chars, Images: ${referenceImages?.length || 0}`);
+    console.log(`🎨 Generation ${i + 1}/${numImages} - Prompt length: ${prompt.length} chars, Images: ${referenceImages?.length || 0}`);
     
     const body = {
       contents: [
@@ -136,8 +142,31 @@ async function generateBananaImages(
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, referenceImage, referenceImageMimeType, referenceImages, referenceImageType, selectedPlacements } =
+    // Check authentication and credits BEFORE generating
+    const userId = await requireAuth(req);
+    
+    const { prompt, referenceImage, referenceImageMimeType, referenceImages, referenceImageType, selectedPlacements, numberOfImages } =
       await req.json();
+
+    // Calculate required credits based on number of images
+    const numImages = numberOfImages ? Math.max(1, Math.min(4, Math.floor(numberOfImages))) : 4;
+    const requiredCredits = numImages * CREDIT_COSTS.GENERATE_DESIGN;
+    
+    console.log(`💰 Credit calculation: ${numImages} images × ${CREDIT_COSTS.GENERATE_DESIGN} credits = ${requiredCredits} credits required`);
+    
+    // Check if user has enough credits
+    const userCredits = await getUserCredits(userId);
+    
+    if (userCredits < requiredCredits) {
+      return NextResponse.json(
+        {
+          error: "Insufficient credits",
+          requiredCredits,
+          currentCredits: userCredits,
+        },
+        { status: 402 } // 402 Payment Required
+      );
+    }
 
     let promptRaw = String(prompt || "").trim();
     if (!promptRaw) {
@@ -245,12 +274,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const images = await generateBananaImages(promptRaw, referenceImageDataArray, referenceImageType);
+    // Deduct credits BEFORE generation
+    const deductResult = await deductCredits(userId, requiredCredits, "generate_design");
+    if (!deductResult.success) {
+      return NextResponse.json(
+        { error: deductResult.error || "Failed to deduct credits" },
+        { status: 500 }
+      );
+    }
+
+    // numImages is already calculated above, use it here
+    const images = await generateBananaImages(promptRaw, referenceImageDataArray, referenceImageType, numImages);
 
     return NextResponse.json({
       prompt: promptRaw,
       images,
       model: BANANA_VERTEX_MODEL_ID,
+      creditsRemaining: deductResult.remainingCredits,
     });
   } catch (err: any) {
     console.error("Error in /api/generate-banana:", err);

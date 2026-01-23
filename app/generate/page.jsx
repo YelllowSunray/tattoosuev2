@@ -8,6 +8,9 @@ import { ref, uploadString } from "firebase/storage";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
 import CustomerSelector from "../components/CustomerSelector";
+import CreditsDisplay from "../components/CreditsDisplay";
+import PurchaseCredits from "../components/PurchaseCredits";
+import { CREDIT_COSTS } from "@/lib/credit-config";
 
 const PLACEMENTS = [
   "Arm",
@@ -41,11 +44,26 @@ export default function GeneratePage() {
   const [selectedStyleIds, setSelectedStyleIds] = useState([]);
   const [currentStyleId, setCurrentStyleId] = useState("");
   const [selectedPlacements, setSelectedPlacements] = useState([]);
+  const [customPlacement, setCustomPlacement] = useState("");
+  const [showCustomPlacement, setShowCustomPlacement] = useState(false);
   const [referenceImages, setReferenceImages] = useState([]);
   const [referenceImageType, setReferenceImageType] = useState("placement"); // "placement" or "subject"
   const [styleSearchQuery, setStyleSearchQuery] = useState("");
   const [showStyleSearchResults, setShowStyleSearchResults] = useState(false);
+  const [selectedColor, setSelectedColor] = useState("");
+  const [monochromaticColor, setMonochromaticColor] = useState("");
+  const [customColor, setCustomColor] = useState("");
+  const [showCustomColor, setShowCustomColor] = useState(false);
+  const [selectedSkinColor, setSelectedSkinColor] = useState("");
+  const [numberOfImages, setNumberOfImages] = useState(4);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [isGeneratingStencils, setIsGeneratingStencils] = useState(false);
+  const [stencils, setStencils] = useState(null);
+  const [userCredits, setUserCredits] = useState(null);
+  const [showPurchaseCredits, setShowPurchaseCredits] = useState(false);
+  const [showReferenceImageInfo, setShowReferenceImageInfo] = useState(false);
+  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
+  const [formWasReset, setFormWasReset] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
   const handlePortraitChange = (e) => {
@@ -69,8 +87,13 @@ export default function GeneratePage() {
             type: referenceImageType, // Store the type when image is uploaded
           };
           
-          // Add to state
-          setReferenceImages((prev) => [...prev, imageData]);
+          // Add to state, but only keep images of the current type
+          // This ensures we never have both placement and subject images at the same time
+          setReferenceImages((prev) => {
+            // Filter out any images of the other type, then add the new image
+            const filtered = prev.filter(img => img.type === referenceImageType);
+            return [...filtered, imageData];
+          });
         }
       };
       reader.readAsDataURL(file);
@@ -104,6 +127,8 @@ export default function GeneratePage() {
   };
 
   const handleStyleSearchSelect = (styleId) => {
+    // Reset formWasReset flag when user manually selects a style
+    setFormWasReset(false);
     if (!selectedStyleIds.includes(styleId)) {
       setSelectedStyleIds((prev) => [...prev, styleId]);
     }
@@ -124,6 +149,207 @@ export default function GeneratePage() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Check for Stripe redirect success/cancel
+  useEffect(() => {
+    if (typeof window !== "undefined" && user) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("success") === "true") {
+        const credits = params.get("credits");
+        setResultText(`Successfully purchased ${credits} credits! You can now generate designs.`);
+        // Refresh credits
+        fetchUserCredits();
+        // Clean URL
+        window.history.replaceState({}, "", "/generate");
+      } else if (params.get("canceled") === "true") {
+        setResultText("Payment was canceled.");
+        window.history.replaceState({}, "", "/generate");
+      }
+    }
+  }, [user]);
+
+  // Fetch user credits
+  const fetchUserCredits = async () => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/users/credits", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserCredits(data.credits);
+      }
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchUserCredits();
+    }
+  }, [user]);
+
+  // Restore form state when returning from favorite styles page
+  useEffect(() => {
+    const savedState = localStorage.getItem("generateFormState");
+    if (savedState) {
+      try {
+        const formState = JSON.parse(savedState);
+        if (formState.prompt) setPrompt(formState.prompt);
+        if (formState.selectedModel) setSelectedModel(formState.selectedModel);
+        if (formState.selectedCategoryId !== undefined) setSelectedCategoryId(formState.selectedCategoryId);
+        if (formState.selectedStyleIds) setSelectedStyleIds(formState.selectedStyleIds);
+        if (formState.selectedPlacements) setSelectedPlacements(formState.selectedPlacements);
+        if (formState.customPlacement) setCustomPlacement(formState.customPlacement);
+        if (formState.showCustomPlacement) setShowCustomPlacement(formState.showCustomPlacement);
+        if (formState.selectedColor) setSelectedColor(formState.selectedColor);
+        if (formState.monochromaticColor) setMonochromaticColor(formState.monochromaticColor);
+        if (formState.customColor) setCustomColor(formState.customColor);
+        if (formState.showCustomColor) setShowCustomColor(formState.showCustomColor);
+        if (formState.selectedSkinColor) setSelectedSkinColor(formState.selectedSkinColor);
+        if (formState.numberOfImages) setNumberOfImages(formState.numberOfImages);
+        if (formState.selectedCustomerId) setSelectedCustomerId(formState.selectedCustomerId);
+        if (formState.referenceImageType) setReferenceImageType(formState.referenceImageType);
+        // Note: referenceImages base64 data is not restored (too large for localStorage)
+        
+        // After restoring form state, load favorites from Firebase and merge them
+        // This ensures favorites selected on favorite-styles page are added to selected styles
+        if (user) {
+          async function loadAndMergeFavorites() {
+            try {
+              const token = await user.getIdToken();
+              const res = await fetch("/api/users/favorite-styles", {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+              
+              if (res.ok) {
+                const data = await res.json();
+                const favoriteIds = data.favoriteStyleIds || [];
+                if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+                  // Merge favorites with restored form state styles
+                  setSelectedStyleIds((prev) => {
+                    const combined = [...prev];
+                    favoriteIds.forEach((id) => {
+                      if (!combined.includes(id)) {
+                        combined.push(id);
+                      }
+                    });
+                    return combined;
+                  });
+                }
+              }
+            } catch (e) {
+              console.error("Error loading favorites after form restore:", e);
+            }
+          }
+          
+          loadAndMergeFavorites();
+        }
+        
+        // Clear saved state after restoring
+        localStorage.removeItem("generateFormState");
+      } catch (e) {
+        console.error("Error restoring form state:", e);
+      }
+    } else {
+      // No saved form state means this is a fresh page load (refresh)
+      // Clear favorites from Firebase so "Find Favorite Styles" starts fresh
+      if (user) {
+        async function clearFavoritesOnRefresh() {
+          try {
+            const token = await user.getIdToken();
+            await fetch("/api/users/favorite-styles", {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({ favoriteStyleIds: [] }),
+            });
+            // Clear sessionStorage flag
+            const sessionKey = `favoritesLoaded_${user.uid}`;
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem(sessionKey);
+            }
+          } catch (e) {
+            console.error("Error clearing favorites on refresh:", e);
+          }
+        }
+        
+        // Fire and forget - don't await to avoid blocking page load
+        clearFavoritesOnRefresh().catch((e) => {
+          console.error("Error clearing favorites on refresh:", e);
+        });
+      }
+    }
+  }, [user]); // Depend on user so we can load favorites after form restore
+
+  // Load favorite styles from Firebase (only once per session when user is authenticated)
+  useEffect(() => {
+    // Don't load if:
+    // - Already loaded in this session
+    // - Component state says already loaded
+    // - User is not authenticated
+    // - Auth is still loading
+    // - Form was explicitly reset (user doesn't want favorites)
+    const sessionKey = `favoritesLoaded_${user?.uid || 'anonymous'}`;
+    const alreadyLoadedInSession = typeof window !== 'undefined' && sessionStorage.getItem(sessionKey) === 'true';
+    
+    if (alreadyLoadedInSession || favoritesLoaded || !user || authLoading || formWasReset) {
+      return;
+    }
+
+    // Load favorites silently in the background
+    async function loadFavoriteStyles() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/favorite-styles", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const favoriteIds = data.favoriteStyleIds || [];
+          if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+            // Only add favorites if no styles are currently selected
+            // This prevents overwriting user's current selection
+            setSelectedStyleIds((prev) => {
+              // If user already has styles selected, don't overwrite
+              if (prev.length > 0) {
+                return prev;
+              }
+              // Otherwise, add favorites
+              const combined = [...prev];
+              favoriteIds.forEach((id) => {
+                if (!combined.includes(id)) {
+                  combined.push(id);
+                }
+              });
+              return combined;
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Error loading favorite styles:", e);
+      } finally {
+        // Mark as loaded in both component state and sessionStorage
+        setFavoritesLoaded(true);
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(sessionKey, 'true');
+        }
+      }
+    }
+    
+    loadFavoriteStyles();
+  }, [user, authLoading, favoritesLoaded, formWasReset]); // Depend on user, authLoading, and formWasReset
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -175,9 +401,43 @@ export default function GeneratePage() {
         extraParts.push(`${category.name} tattoo style`);
       }
 
-      if (selectedPlacements.length > 0) {
+      if (customPlacement.trim()) {
+        extraParts.push(`placement on the ${customPlacement.trim().toLowerCase()}`);
+      } else if (selectedPlacements.length > 0) {
         const places = selectedPlacements.map((p) => p.toLowerCase()).join(" or ");
         extraParts.push(`placement on the ${places}`);
+      }
+
+      // Add color selection
+      if (selectedColor === "custom" && customColor.trim()) {
+        extraParts.push(`color: ${customColor.trim()}`);
+      } else if (selectedColor === "black-grey") {
+        extraParts.push("color: black and grey");
+      } else if (selectedColor === "full-color") {
+        extraParts.push("color: full color");
+      } else if (selectedColor === "natural-palette") {
+        extraParts.push("color: natural palette");
+      } else if (selectedColor === "monochromatic" && monochromaticColor.trim()) {
+        extraParts.push(`color: monochromatic ${monochromaticColor.trim()}`);
+      } else if (selectedColor === "monochromatic") {
+        extraParts.push("color: monochromatic");
+      } else if (selectedColor === "sepia-vintage") {
+        extraParts.push("color: sepia / vintage palette");
+      } else if (selectedColor === "white-ink") {
+        extraParts.push("color: white ink");
+      }
+
+      // Add skin color selection
+      if (selectedSkinColor) {
+        const skinColorLabels = {
+          "light": "light skin tone",
+          "light-medium": "light medium skin tone",
+          "medium": "medium skin tone",
+          "medium-dark": "medium dark skin tone",
+          "dark": "dark skin tone",
+          "very-dark": "very dark skin tone",
+        };
+        extraParts.push(`skin color: ${skinColorLabels[selectedSkinColor] || selectedSkinColor}`);
       }
 
       if (extraParts.length > 0) {
@@ -189,6 +449,7 @@ export default function GeneratePage() {
       const body = {
         prompt: fullPrompt,
         model: selectedModel,
+        numberOfImages: numberOfImages,
       };
 
       // Only send reference images when using NanoBanana / Gemini models
@@ -203,28 +464,51 @@ export default function GeneratePage() {
           mimeType: img.mimeType,
         }));
         body.referenceImageType = referenceImageType; // "placement" or "subject"
-        // Include selected placements for placement photos
-        if (referenceImageType === "placement" && selectedPlacements.length > 0) {
-          body.selectedPlacements = selectedPlacements;
+        // Include selected placements or custom placement for placement photos
+        if (referenceImageType === "placement") {
+          if (customPlacement.trim()) {
+            body.customPlacement = customPlacement.trim();
+          } else if (selectedPlacements.length > 0) {
+            body.selectedPlacements = selectedPlacements;
+          }
         }
       }
 
+      const token = await user.getIdToken();
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setResultText(data.error || "Failed to generate image.");
+        if (res.status === 402) {
+          // Insufficient credits
+          setResultText(`Insufficient credits. You need ${data.requiredCredits} credits but only have ${data.currentCredits}.`);
+          setShowPurchaseCredits(true);
+          // Refresh credits
+          fetchUserCredits();
+        } else {
+          setResultText(data.error || "Failed to generate image.");
+        }
         return;
+      }
+
+      // Update credits if returned
+      if (data.creditsRemaining !== undefined) {
+        setUserCredits(data.creditsRemaining);
       }
 
       if (Array.isArray(data.images) && data.images.length > 0) {
         setImages(data.images);
+        setStencils(null); // Clear previous stencils when new images are generated
         setResultText(`Generated ${data.images.length} image(s) with ${selectedModel}.`);
+        console.log(`📸 Generated ${data.images.length} images - these will be saved in order`);
 
         // Save to Firebase Storage under generated/{userId}/
         const timestamp = Date.now();
@@ -235,23 +519,33 @@ export default function GeneratePage() {
         
         // Upload images and collect paths
         // Note: We don't store base64 data URLs in Firestore due to size limits (~1MB per array)
+        // CRITICAL: Maintain order - imagePaths[i] must correspond to data.images[i]
         const uploadPromises = data.images.map(async (img, idx) => {
           if (typeof img !== "string" || !img.startsWith("data:")) {
             console.warn(`Skipping image ${idx}: invalid format`);
-            return;
+            return { index: idx, path: null };
           }
           const path = `generated/${userId}/${timestamp}-${idx}.png`;
           const storageRef = ref(storage, path);
           try {
             await uploadString(storageRef, img, "data_url");
-            imagePaths.push(path);
-            console.log(`Successfully uploaded image ${idx} to ${path}`);
+            console.log(`✅ Saved images[${idx}] to ${path}`);
+            return { index: idx, path: path };
           } catch (err) {
             console.error(`Failed to save generated image ${idx} to Firebase:`, err);
+            return { index: idx, path: null };
           }
         });
         
-        await Promise.all(uploadPromises);
+        const imageUploadResults = await Promise.all(uploadPromises);
+        // Reconstruct imagePaths array in correct order
+        imageUploadResults.forEach((result) => {
+          if (result.path) {
+            imagePaths.push(result.path);
+          }
+        });
+        
+        console.log(`📸 Final imagePaths (${imagePaths.length}):`, imagePaths);
         
         console.log("Upload complete. imagePaths:", imagePaths.length);
         
@@ -332,6 +626,11 @@ export default function GeneratePage() {
             } else {
               const successData = await generationRes.json();
               console.log("Successfully saved generation metadata:", successData);
+              // Store generation ID for later stencil linking
+              if (successData.generationId) {
+                sessionStorage.setItem('lastGenerationId', successData.generationId);
+                sessionStorage.setItem('lastGenerationCustomerId', selectedCustomerId);
+              }
             }
           } catch (err) {
             console.error("Error saving generation metadata:", err);
@@ -347,35 +646,326 @@ export default function GeneratePage() {
     }
   };
 
+  const handleGenerateStencils = async () => {
+    if (!images || images.length === 0) {
+      setResultText("No images to convert to stencils.");
+      return;
+    }
+
+    setIsGeneratingStencils(true);
+    setStencils(null);
+    setResultText("");
+
+    try {
+      // Get placement photo if available (for curved surface inference)
+      let placementPhoto = null;
+      let placementMimeType = "image/png";
+      const placementImages = referenceImages.filter(img => img.type === "placement");
+      
+      console.log(`🔍 Stencil: Checking for placement photos. Found ${placementImages.length} placement image(s)`);
+      
+      if (placementImages.length > 0) {
+        // Use the first placement image
+        const placementImg = placementImages[0];
+        // Convert base64 data back to data URL format
+        placementPhoto = `data:${placementImg.mimeType || "image/png"};base64,${placementImg.data}`;
+        placementMimeType = placementImg.mimeType || "image/png";
+        console.log(`✅ Stencil: Using placement photo for curved surface inference`);
+      } else {
+        console.log(`⚠️  Stencil: No placement photo found - will create basic stencil`);
+      }
+
+      // Get body part from selected placements or custom placement
+      const bodyPart = customPlacement.trim() 
+        ? customPlacement.trim().toLowerCase()
+        : selectedPlacements.length > 0 
+        ? selectedPlacements[0].toLowerCase() 
+        : undefined;
+
+      console.log(`📍 Stencil: Body part = ${bodyPart || "not specified"}`);
+
+      const requestBody = { images };
+      
+      if (placementPhoto) {
+        requestBody.placementPhoto = placementPhoto;
+        requestBody.placementMimeType = placementMimeType;
+        console.log(`📤 Stencil: Sending placement photo with request`);
+      }
+      
+      if (bodyPart) {
+        requestBody.bodyPart = bodyPart;
+        console.log(`📤 Stencil: Sending body part "${bodyPart}" with request`);
+      }
+      
+      console.log(`📤 Stencil: Sending ${images.length} image(s) for stencil conversion`);
+
+      const token = await user.getIdToken();
+      const res = await fetch("/api/generate-stencil", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 402) {
+          // Insufficient credits
+          setResultText(`Insufficient credits. You need ${data.requiredCredits} credits but only have ${data.currentCredits}.`);
+          setShowPurchaseCredits(true);
+          // Refresh credits
+          fetchUserCredits();
+        } else {
+          setResultText(data.error || "Failed to generate stencils.");
+        }
+        return;
+      }
+
+      // Update credits if returned
+      if (data.creditsRemaining !== undefined) {
+        setUserCredits(data.creditsRemaining);
+      }
+
+      if (Array.isArray(data.stencils) && data.stencils.length > 0) {
+        setStencils(data.stencils);
+        const inferenceNote = placementPhoto && bodyPart 
+          ? ` with curved surface inference for ${bodyPart}` 
+          : "";
+        setResultText(`Generated ${data.stencils.length} stencil(s)${inferenceNote}.`);
+        
+        // Save stencils to Firebase Storage and link to generation
+        if (images && images.length > 0 && user && selectedCustomerId) {
+          try {
+            console.log(`📊 Stencil mapping: images.length=${images.length}, stencils.length=${data.stencils.length}`);
+            console.log(`📊 Stencil: images state variable order (first 50 chars each):`, images.map((img, i) => `images[${i}]: ${img.substring(0, 50)}...`));
+            
+            const timestamp = Date.now();
+            const userId = user.uid;
+            // CRITICAL: API returns stencils array where stencils[i] corresponds to images[i]
+            // Initialize array with same length as images to maintain index correspondence
+            const stencilPaths = new Array(images.length).fill(null);
+            
+            // Upload stencils and collect paths
+            // CRITICAL: data.stencils[i] corresponds to images[i] - use the index directly
+            const uploadPromises = data.stencils.map(async (stencil, stencilIdx) => {
+              // Skip null stencils (invalid or failed conversions)
+              if (!stencil || !stencil.startsWith("data:")) {
+                console.log(`⏭️  Skipping null stencil at index ${stencilIdx}`);
+                return { index: stencilIdx, path: null };
+              }
+              // Create stencil path that links to the original image
+              // Format: generated/{userId}/stencils/{timestamp}-{imageIdx}.png
+              // Use stencilIdx directly since API maintains order: stencils[i] = stencil for images[i]
+              const path = `generated/${userId}/stencils/${timestamp}-${stencilIdx}.png`;
+              const storageRef = ref(storage, path);
+              try {
+                await uploadString(storageRef, stencil, "data_url");
+                console.log(`✅ Uploaded stencil[${stencilIdx}] (for images[${stencilIdx}]) to ${path}`);
+                return { index: stencilIdx, path: path };
+              } catch (err) {
+                console.error(`❌ Failed to save stencil ${stencilIdx} to Firebase:`, err);
+                return { index: stencilIdx, path: null };
+              }
+            });
+            
+            // Promise.all preserves the order of results
+            // Since data.stencils is already in correct order matching images, results[i] corresponds to images[i]
+            const uploadResults = await Promise.all(uploadPromises);
+            // Assign paths to correct indices to maintain correspondence with images
+            uploadResults.forEach((result) => {
+              stencilPaths[result.index] = result.path;
+              if (result.path) {
+                console.log(`📌 Mapped stencilPaths[${result.index}] = ${result.path} (for images[${result.index}])`);
+              }
+            });
+            
+            console.log(`📋 Final stencilPaths array (length=${stencilPaths.length}):`, stencilPaths);
+            
+            // Filter out nulls for the API call (only send paths that exist)
+            const validStencilPaths = stencilPaths.filter(path => path !== null);
+            
+            // Update the generation with stencil paths (maintain full array with nulls for index correspondence)
+            if (validStencilPaths.length > 0) {
+              // Use stencilPaths (with nulls) to maintain index correspondence with images
+              // This ensures stencilPaths[i] corresponds to images[i]
+              const token = await user.getIdToken();
+              
+              // Try to get the generation ID from sessionStorage (saved when generation was created)
+              let generationId = sessionStorage.getItem('lastGenerationId');
+              const savedCustomerId = sessionStorage.getItem('lastGenerationCustomerId');
+              
+              // Verify it's for the same customer
+              if (generationId && savedCustomerId === selectedCustomerId) {
+                // Update generation with stencil paths
+                const updateRes = await fetch(`/api/generations/${generationId}/stencils`, {
+                  method: "PUT",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${token}`,
+                  },
+                    body: JSON.stringify({ stencils: stencilPaths }), // Full array with nulls for index correspondence
+                  });
+                  
+                  if (updateRes.ok) {
+                    console.log("Successfully linked stencils to generation");
+                  } else {
+                    console.error("Failed to link stencils to generation");
+                  }
+                } else {
+                  // Fallback: find the most recent generation for this customer
+                  const generationsRes = await fetch(`/api/generations/customer/${selectedCustomerId}`, {
+                    headers: {
+                      "Authorization": `Bearer ${token}`,
+                    },
+                  });
+                  
+                  if (generationsRes.ok) {
+                    const generationsData = await generationsRes.json();
+                    const gens = generationsData.generations || [];
+                    // Find the most recent generation (should be the one we just created)
+                    const mostRecentGen = gens.sort((a, b) => 
+                      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+                    )[0];
+                    
+                    if (mostRecentGen) {
+                      // Update generation with stencil paths
+                      const updateRes = await fetch(`/api/generations/${mostRecentGen.id}/stencils`, {
+                        method: "PUT",
+                        headers: {
+                          "Content-Type": "application/json",
+                          "Authorization": `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({ stencils: stencilPaths }), // Full array with nulls for index correspondence
+                    });
+                    
+                    if (updateRes.ok) {
+                      console.log("Successfully linked stencils to generation");
+                    } else {
+                      console.error("Failed to link stencils to generation");
+                    }
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            console.error("Error saving stencils:", err);
+            // Don't show error to user - stencils are still available locally
+          }
+        }
+      } else {
+        setResultText("No stencils returned from the server.");
+      }
+    } catch (err) {
+      console.error("Error generating stencils:", err);
+      setResultText("An error occurred while generating stencils.");
+    } finally {
+      setIsGeneratingStencils(false);
+    }
+  };
+
+  const handleResetForm = async () => {
+    // Reset all form fields
+    setPrompt("");
+    setSelectedModel("nanobanana");
+    setSelectedCategoryId(null);
+    setSelectedStyleIds([]); // Clear selected styles (including favorites)
+    setCurrentStyleId("");
+    setSelectedPlacements([]);
+    setCustomPlacement("");
+    setShowCustomPlacement(false);
+    setReferenceImages([]);
+    setReferenceImageType("placement");
+    setStyleSearchQuery("");
+    setShowStyleSearchResults(false);
+    setSelectedColor("");
+    setMonochromaticColor("");
+    setCustomColor("");
+    setShowCustomColor(false);
+    setSelectedSkinColor("");
+    setNumberOfImages(4);
+    setSelectedCustomerId(null);
+    setImages(null);
+    setStencils(null);
+    setResultText("");
+    setShowPurchaseCredits(false);
+    // Clear localStorage form state
+    localStorage.removeItem("generateFormState");
+    // Mark that form was reset - this prevents favorites from auto-loading
+    setFormWasReset(true);
+    
+    // Clear favorites from Firebase when resetting form
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await fetch("/api/users/favorite-styles", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ favoriteStyleIds: [] }),
+        });
+        // Clear sessionStorage flag so favorites can be loaded fresh if needed
+        const sessionKey = `favoritesLoaded_${user.uid}`;
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(sessionKey);
+        }
+      } catch (e) {
+        console.error("Error clearing favorite styles:", e);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
       <div className="w-full max-w-3xl border border-white/10 bg-black/70 p-6 sm:p-8 space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
-              Generate Tattoo Design
-            </h1>
-            <p className="text-xs sm:text-sm text-white/60">
-              Choose a model and describe the tattoo you want. This page is
-              wired up for different AI models to help you explore tattoo
-              ideas.
-            </p>
-          </div>
-          <div className="flex flex-col items-end gap-2">
+        <div className="space-y-4">
+          <div className="flex items-center justify-end gap-2 flex-wrap">
+            <Link
+              href="/"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            >
+              ← Back to gallery
+            </Link>
+            <Link
+              href="/customers"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            >
+              Customers
+            </Link>
             <div className="flex items-center gap-2">
+              <CreditsDisplay />
               <Link
-                href="/"
+                href="/credits"
                 className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
               >
-                ← Back to gallery
+                Credits
               </Link>
-              <Link
-                href="/customers"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            </div>
+            <AuthButton />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
+                  Generate Tattoo Design
+                </h1>
+                <p className="text-xs sm:text-sm text-white/60 mt-1">
+                  Choose a model and describe the tattoo you want. This page is
+                  wired up for different AI models to help you explore tattoo
+                  ideas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors whitespace-nowrap"
               >
-                Customers
-              </Link>
-              <AuthButton />
+                Reset Form
+              </button>
             </div>
           </div>
         </div>
@@ -404,6 +994,29 @@ export default function GeneratePage() {
             onSelectCustomer={setSelectedCustomerId}
           />
           
+          {/* Model picker */}
+          <div className="space-y-2">
+            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+              Model
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {MODELS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setSelectedModel(m.id)}
+                  className={`px-3 py-1.5 text-xs sm:text-sm border transition-colors ${
+                    selectedModel === m.id
+                      ? "bg-white text-black border-white"
+                      : "bg-transparent text-white/70 border-white/30 hover:border-white/60"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
           {/* Placement selection */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
@@ -416,13 +1029,18 @@ export default function GeneratePage() {
                 <button
                   key={place}
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setSelectedPlacements((prev) =>
                       prev.includes(place)
                         ? prev.filter((p) => p !== place)
                         : [...prev, place]
-                    )
-                  }
+                    );
+                    // If selecting a predefined placement, clear custom placement
+                    if (!active) {
+                      setShowCustomPlacement(false);
+                      setCustomPlacement("");
+                    }
+                  }}
                   className={`px-3 py-1.5 text-xs border transition-colors capitalize ${
                     active
                       ? "bg-white text-black border-white"
@@ -433,7 +1051,37 @@ export default function GeneratePage() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => {
+                setShowCustomPlacement(!showCustomPlacement);
+                if (showCustomPlacement) {
+                  setCustomPlacement("");
+                } else {
+                  // Clear predefined placements when selecting "Other"
+                  setSelectedPlacements([]);
+                }
+              }}
+              className={`px-3 py-1.5 text-xs border transition-colors ${
+                showCustomPlacement
+                  ? "bg-white text-black border-white"
+                  : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+              }`}
+            >
+              Other
+            </button>
           </div>
+          {showCustomPlacement && (
+            <div className="mt-2">
+              <input
+                type="text"
+                value={customPlacement}
+                onChange={(e) => setCustomPlacement(e.target.value)}
+                placeholder="Enter body part (e.g., wrist, ankle, thigh)"
+                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+              />
+            </div>
+          )}
           </div>
 
           {/* Style selection with search */}
@@ -443,22 +1091,23 @@ export default function GeneratePage() {
             </label>
             
             {/* Style Search */}
-            <div className="relative" ref={styleSearchRef}>
-              <input
-                type="text"
-                value={styleSearchQuery}
-                onChange={(e) => {
-                  setStyleSearchQuery(e.target.value);
-                  setShowStyleSearchResults(true);
-                }}
-                onFocus={() => {
-                  if (styleSearchQuery.trim()) {
+            <div className="flex gap-2">
+              <div className="relative flex-1" ref={styleSearchRef}>
+                <input
+                  type="text"
+                  value={styleSearchQuery}
+                  onChange={(e) => {
+                    setStyleSearchQuery(e.target.value);
                     setShowStyleSearchResults(true);
-                  }
-                }}
-                placeholder="Search styles (e.g., 'realism', 'mandala', 'minimalist')"
-                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
-              />
+                  }}
+                  onFocus={() => {
+                    if (styleSearchQuery.trim()) {
+                      setShowStyleSearchResults(true);
+                    }
+                  }}
+                  placeholder="Search styles (e.g., 'realism', 'mandala', 'minimalist')"
+                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                />
               
               {/* Search Results Dropdown */}
               {showStyleSearchResults && styleSearchQuery.trim() && (
@@ -499,6 +1148,44 @@ export default function GeneratePage() {
                   )}
                 </div>
               )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  // Reset formWasReset flag so favorites can be loaded when returning
+                  setFormWasReset(false);
+                  // Save current form state to localStorage
+                  const formState = {
+                    prompt,
+                    selectedModel,
+                    selectedCategoryId,
+                    selectedStyleIds,
+                    selectedPlacements,
+                    customPlacement,
+                    showCustomPlacement,
+                    selectedColor,
+                    monochromaticColor,
+                    customColor,
+                    showCustomColor,
+                    selectedSkinColor,
+                    numberOfImages,
+                    selectedCustomerId,
+                    referenceImages: referenceImages.map(img => ({
+                      fileName: img.fileName,
+                      mimeType: img.mimeType,
+                      type: img.type,
+                      // Don't save base64 data - too large
+                    })),
+                    referenceImageType,
+                  };
+                  localStorage.setItem("generateFormState", JSON.stringify(formState));
+                  // Navigate to favorite styles page
+                  window.location.href = "/favorite-styles";
+                }}
+                className="px-3 py-2 text-xs sm:text-sm border border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white hover:border-white/50 transition-colors whitespace-nowrap shrink-0"
+              >
+                Find Favorite Styles
+              </button>
             </div>
 
             {/* Alternative: Category-based selection */}
@@ -551,6 +1238,8 @@ export default function GeneratePage() {
                     onClick={() => {
                       if (!currentStyleId) return;
                       const id = Number(currentStyleId);
+                      // Reset formWasReset flag when user manually selects a style
+                      setFormWasReset(false);
                       setSelectedStyleIds((prev) =>
                         prev.includes(id) ? prev : [...prev, id]
                       );
@@ -594,7 +1283,7 @@ export default function GeneratePage() {
                           prev.filter((styleId) => styleId !== id)
                         )
                       }
-                      className="px-2 py-1 text-[11px] border border-white/40 rounded-full text-white/80 hover:bg-white hover:text-black flex items-center gap-1"
+                      className="px-2 py-1 text-[11px] border border-white/40 rounded-full bg-white text-black hover:bg-white/90 flex items-center gap-1"
                     >
                       <span>{style.name}</span>
                       <span>×</span>
@@ -605,42 +1294,234 @@ export default function GeneratePage() {
             )}
           </div>
 
-          {/* Model picker */}
+          {/* Color selection */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Model
+              Color (optional)
             </label>
             <div className="flex flex-wrap gap-2">
-              {MODELS.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  onClick={() => setSelectedModel(m.id)}
-                  className={`px-3 py-1.5 text-xs sm:text-sm border transition-colors ${
-                    selectedModel === m.id
-                      ? "bg-white text-black border-white"
-                      : "bg-transparent text-white/70 border-white/30 hover:border-white/60"
-                  }`}
-                >
-                  {m.label}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "black-grey") {
+                    setSelectedColor("");
+                  } else {
+                    setSelectedColor("black-grey");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "black-grey"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Black & Grey
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "full-color") {
+                    setSelectedColor("");
+                  } else {
+                    setSelectedColor("full-color");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "full-color"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Full Color
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "natural-palette") {
+                    setSelectedColor("");
+                  } else {
+                    setSelectedColor("natural-palette");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "natural-palette"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Natural Palette
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "monochromatic") {
+                    setSelectedColor("");
+                    setMonochromaticColor("");
+                  } else {
+                    setSelectedColor("monochromatic");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "monochromatic"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Monochromatic Color (Single Color)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "sepia-vintage") {
+                    setSelectedColor("");
+                  } else {
+                    setSelectedColor("sepia-vintage");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                    setMonochromaticColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "sepia-vintage"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Sepia / Vintage Palette
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "white-ink") {
+                    setSelectedColor("");
+                  } else {
+                    setSelectedColor("white-ink");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                    setMonochromaticColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "white-ink"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                White Ink
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedColor === "custom") {
+                    setSelectedColor("");
+                    setShowCustomColor(false);
+                    setCustomColor("");
+                  } else {
+                    setSelectedColor("custom");
+                    setShowCustomColor(true);
+                    setMonochromaticColor("");
+                  }
+                }}
+                className={`px-3 py-1.5 text-xs border transition-colors ${
+                  selectedColor === "custom"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Other
+              </button>
             </div>
+            {selectedColor === "monochromatic" && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={monochromaticColor}
+                  onChange={(e) => setMonochromaticColor(e.target.value)}
+                  placeholder="Enter color (e.g., red, blue, green)"
+                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+                />
+              </div>
+            )}
+            {showCustomColor && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={customColor}
+                  onChange={(e) => setCustomColor(e.target.value)}
+                  placeholder="Custom color (e.g., Golden Accents)"
+                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+                />
+              </div>
+            )}
           </div>
 
           {/* Reference image upload (NanoBanana / Gemini only) */}
           {(selectedModel === "nanobanana" || selectedModel === "gemini25") && (
             <div className="space-y-3">
               <div className="space-y-2">
-                <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-                  Reference Image (optional)
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+                    Reference Image (optional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowReferenceImageInfo(!showReferenceImageInfo)}
+                    className="w-4 h-4 rounded-full border border-white/40 text-white/60 hover:text-white hover:border-white/60 flex items-center justify-center text-[10px] transition-colors"
+                    title="Show more information"
+                    aria-label="Toggle reference image information"
+                  >
+                    i
+                  </button>
+                </div>
+                
+                {/* TLDR Version (always visible) */}
+                <div className="mb-2">
+                  <p className="text-[11px] text-white/50 leading-relaxed">
+                    <strong>Placement:</strong> Upload a customer's body part photo to see how the tattoo looks on your customer. <br /><br />
+                    <strong>Subject:</strong> Upload a photo (family, pet, object) or pinterest tattoo to use as the tattoo's subject matter. <strong>Note:</strong> These cannot be used simultaneously—choose one option.
+                  </p>
+                </div>
+                
+                {/* Expanded Info (toggleable) */}
+                {showReferenceImageInfo && (
+                  <div className="space-y-2 mb-3 p-3 border border-white/10 bg-black/40 rounded">
+                    <p className="text-[11px] text-white/60 leading-relaxed">
+                      Choose one reference type to guide your tattoo generation. Both options serve different purposes and cannot be used simultaneously.
+                    </p>
+                    
+                    <div className="space-y-2 text-[11px] text-white/50">
+                      <div className="border-l-2 border-white/20 pl-3 py-1">
+                        <p className="font-medium text-white/70 mb-0.5">Placement Photo</p>
+                        <p className="leading-relaxed">
+                          Perfect for visualizing how a tattoo will look on a specific body part. Upload a photo of your customer's arm, back, chest, or other body area to see the design rendered on their actual anatomy. This helps with placement decisions and shows realistic proportions.
+                        </p>
+                      </div>
+                      
+                      <div className="border-l-2 border-white/20 pl-3 py-1">
+                        <p className="font-medium text-white/70 mb-0.5">Subject Photo</p>
+                        <p className="leading-relaxed">
+                          Ideal for using a photo as the subject matter of your tattoo design. Upload photos of family members, pets, objects, Pinterest tattoos, or any reference image you want the AI to incorporate into the tattoo artwork. The design will be inspired by or feature elements from your reference.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 
                 {/* Image type selector */}
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <button
                     type="button"
                     onClick={() => {
+                      // Clear all images when switching types
+                      setReferenceImages([]);
                       setReferenceImageType("placement");
                     }}
                     className={`px-3 py-1.5 text-xs border transition-colors ${
@@ -651,9 +1532,12 @@ export default function GeneratePage() {
                   >
                     Placement Photo
                   </button>
+                  <span className="text-xs text-white/50">OR</span>
                   <button
                     type="button"
                     onClick={() => {
+                      // Clear all images when switching types
+                      setReferenceImages([]);
                       setReferenceImageType("subject");
                     }}
                     className={`px-3 py-1.5 text-xs border transition-colors ${
@@ -665,12 +1549,6 @@ export default function GeneratePage() {
                     Subject Photo
                   </button>
                 </div>
-                
-                <p className="text-[11px] text-white/50">
-                  {referenceImageType === "placement" 
-                    ? "Placement: Body photo showing where the tattoo should be placed (e.g., arm, back, chest)"
-                    : "Subject: Photo of the subject matter for the tattoo design (e.g., animal, flower, symbol)"}
-                </p>
               </div>
               
               <input
@@ -746,6 +1624,49 @@ export default function GeneratePage() {
             </div>
           )}
 
+          {/* Skin Color selection */}
+          <div className="space-y-2">
+            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+              Skin Color (optional)
+            </label>
+            <p className="text-[11px] text-white/50 mb-2">
+              Select the skin tone for the person with the tattoo
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { id: "light", label: "Light", color: "#F4C2A1" },
+                { id: "light-medium", label: "Light Medium", color: "#E6B89C" },
+                { id: "medium", label: "Medium", color: "#D4A574" },
+                { id: "medium-dark", label: "Medium Dark", color: "#B8864F" },
+                { id: "dark", label: "Dark", color: "#8B5A3C" },
+                { id: "very-dark", label: "Very Dark", color: "#5C3A2A" },
+              ].map((skinTone) => (
+                <button
+                  key={skinTone.id}
+                  type="button"
+                  onClick={() => {
+                    if (selectedSkinColor === skinTone.id) {
+                      setSelectedSkinColor("");
+                    } else {
+                      setSelectedSkinColor(skinTone.id);
+                    }
+                  }}
+                  className={`flex flex-col items-center gap-1.5 px-3 py-2 border transition-colors ${
+                    selectedSkinColor === skinTone.id
+                      ? "border-white bg-white/10"
+                      : "border-white/30 hover:border-white/50"
+                  }`}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full border-2 border-white/30"
+                    style={{ backgroundColor: skinTone.color }}
+                  />
+                  <span className="text-[10px] text-white/70">{skinTone.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Prompt */}
           <div className="space-y-2">
             <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
@@ -755,7 +1676,7 @@ export default function GeneratePage() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
-              placeholder="Example: Fine line mandala forearm tattoo, symmetrical, black ink, delicate details, negative space, mystical but minimal."
+              placeholder="Example: Glorious Phoenix, Rose with thorns, Dragon in flight, Howling wolf, Japanese koi fish"
               className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white resize-none"
             />
             <p className="text-[11px] text-white/40">
@@ -765,12 +1686,43 @@ export default function GeneratePage() {
             </p>
           </div>
 
+          {/* Number of Generated Images */}
+          <div className="space-y-2">
+            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
+              Number of Generated Images
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {[1, 2, 3, 4].map((num) => {
+                const creditsNeeded = num * CREDIT_COSTS.GENERATE_DESIGN;
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setNumberOfImages(num)}
+                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                      numberOfImages === num
+                        ? "bg-white text-black border-white"
+                        : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                    }`}
+                  >
+                    {num}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-white/50">
+              {numberOfImages} image{numberOfImages > 1 ? "s" : ""} = {numberOfImages * CREDIT_COSTS.GENERATE_DESIGN} credit{numberOfImages * CREDIT_COSTS.GENERATE_DESIGN > 1 ? "s" : ""}
+            </p>
+          </div>
+
           <button
             type="submit"
             disabled={isGenerating || !prompt.trim() || !selectedCustomerId}
             className="w-full sm:w-auto px-5 py-2 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed"
           >
-            {isGenerating ? "Generating..." : "Generate design"}
+            {isGenerating 
+              ? `Generating ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}...` 
+              : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${numberOfImages * CREDIT_COSTS.GENERATE_DESIGN} credit${numberOfImages * CREDIT_COSTS.GENERATE_DESIGN > 1 ? "s" : ""}`}
           </button>
         </form>
           )
@@ -784,10 +1736,31 @@ export default function GeneratePage() {
         )}
 
         {images && images.length > 0 && (
-          <div className="mt-6 space-y-2">
-            <p className="text-xs text-white/60">
-              Preview ({images.length} image{images.length > 1 ? "s" : ""})
-            </p>
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-white/60">
+                Preview ({images.length} image{images.length > 1 ? "s" : ""})
+              </p>
+              {images.length > 0 && (
+                <div className="flex flex-col items-end gap-1">
+                  <button
+                    type="button"
+                    onClick={handleGenerateStencils}
+                    disabled={isGeneratingStencils}
+                    className="px-4 py-2 text-sm font-medium text-white bg-white/10 border border-white/30 hover:bg-white/20 disabled:bg-white/5 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isGeneratingStencils 
+                      ? `Generating ${images.length} stencil${images.length > 1 ? "s" : ""}...` 
+                      : `Generate ${images.length} stencil${images.length > 1 ? "s" : ""} for ${images.length * CREDIT_COSTS.GENERATE_STENCIL} credit${images.length * CREDIT_COSTS.GENERATE_STENCIL > 1 ? "s" : ""}`}
+                  </button>
+                  {referenceImages.filter(img => img.type === "placement").length > 0 && selectedPlacements.length > 0 && (
+                    <p className="text-[10px] text-white/40 text-right">
+                      Will infer unseen curved areas
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {images.map((img, idx) => (
                 <div
@@ -805,9 +1778,44 @@ export default function GeneratePage() {
           </div>
         )}
 
+        {stencils && stencils.length > 0 && (
+          <div className="mt-6 space-y-2">
+            <p className="text-xs text-white/60">
+              Stencils ({stencils.length} stencil{stencils.length > 1 ? "s" : ""})
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {stencils.map((stencil, idx) => (
+                <div
+                  key={idx}
+                  className="border border-white/15 bg-black/60 p-2 flex items-center justify-center"
+                >
+                  <img
+                    src={stencil}
+                    alt={`Stencil ${idx + 1}`}
+                    className="w-full h-auto object-contain"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {resultText && (
           <div className="mt-4 border border-white/15 bg-black/60 p-4 text-xs sm:text-sm whitespace-pre-wrap text-white/70">
             {resultText}
+          </div>
+        )}
+        
+        {showPurchaseCredits && (
+          <div className="mt-4 border border-white/20 bg-black/60 p-6">
+            <PurchaseCredits />
+            <button
+              type="button"
+              onClick={() => setShowPurchaseCredits(false)}
+              className="mt-4 text-xs text-white/60 hover:text-white/80"
+            >
+              Close
+            </button>
           </div>
         )}
       </div>

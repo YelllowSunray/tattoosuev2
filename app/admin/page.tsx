@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
+import CreditsDisplay from "../components/CreditsDisplay";
 import { storage } from "@/lib/firebase";
 import { ref, getDownloadURL } from "firebase/storage";
 
@@ -352,6 +353,13 @@ export default function AdminPage() {
               className="text-sm text-white/60 hover:text-white transition-colors"
             >
               Gallery
+            </Link>
+            <CreditsDisplay />
+            <Link
+              href="/credits"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+            >
+              Credits
             </Link>
             <AuthButton />
           </div>

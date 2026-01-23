@@ -6,6 +6,7 @@ import Script from "next/script";
 import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
 import AuthButton from "./components/AuthButton";
+import CreditsDisplay from "./components/CreditsDisplay";
 import {
   getAllTattooImages,
   getUniqueBodyParts,
@@ -21,9 +22,10 @@ export default function Home() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedStyleId, setSelectedStyleId] = useState<number | undefined>();
   const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>();
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(60);
+  const [visibleCount, setVisibleCount] = useState(200);
   const [showPriceDuration, setShowPriceDuration] = useState(true);
 
   // Load tattoo data
@@ -82,11 +84,12 @@ export default function Home() {
       allImages,
       selectedCategoryId,
       selectedStyleId,
-      selectedBodyPart
+      selectedBodyPart,
+      searchQuery
     );
     setFilteredImages(filtered);
-    setVisibleCount(60);
-  }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart]);
+    setVisibleCount(200);
+  }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com';
   const siteName = "Sue's Tattoo Studio";
@@ -177,7 +180,16 @@ export default function Home() {
             </p>
           </div>
           <div className="flex-1 flex justify-end">
-            <AuthButton />
+            <div className="flex items-center gap-2">
+              <CreditsDisplay />
+              <Link
+                href="/credits"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+              >
+                Credits
+              </Link>
+              <AuthButton />
+            </div>
           </div>
         </div>
       </header>
@@ -194,13 +206,16 @@ export default function Home() {
                 selectedCategoryId={selectedCategoryId}
                 selectedStyleId={selectedStyleId}
                 selectedBodyPart={selectedBodyPart}
+                searchQuery={searchQuery}
                 onCategoryChange={setSelectedCategoryId}
                 onStyleChange={setSelectedStyleId}
                 onBodyPartChange={setSelectedBodyPart}
+                onSearchChange={setSearchQuery}
                 onClearAll={() => {
                   setSelectedCategoryId(undefined);
                   setSelectedStyleId(undefined);
                   setSelectedBodyPart(undefined);
+                  setSearchQuery("");
                 }}
               />
             )}
@@ -226,12 +241,13 @@ export default function Home() {
                 >
                   Filters
                 </button>
-                {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
+                {(selectedCategoryId || selectedStyleId || selectedBodyPart || searchQuery) && (
                   <button
                     onClick={() => {
                       setSelectedCategoryId(undefined);
                       setSelectedStyleId(undefined);
                       setSelectedBodyPart(undefined);
+                      setSearchQuery("");
                     }}
                     className="text-xs text-white/60 hover:text-white transition-colors font-light uppercase tracking-wider"
                   >
@@ -304,7 +320,7 @@ export default function Home() {
                 <div className="mt-8 flex justify-center">
                   <button
                     type="button"
-                    onClick={() => setVisibleCount((c) => c + 60)}
+                    onClick={() => setVisibleCount((c) => c + 200)}
                     className="px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 hover:bg-zinc-200 transition-colors"
                   >
                     Load more ({filteredImages.length - visibleCount} more)
@@ -335,13 +351,16 @@ export default function Home() {
               selectedCategoryId={selectedCategoryId}
               selectedStyleId={selectedStyleId}
               selectedBodyPart={selectedBodyPart}
+              searchQuery={searchQuery}
               onCategoryChange={setSelectedCategoryId}
               onStyleChange={setSelectedStyleId}
               onBodyPartChange={setSelectedBodyPart}
+              onSearchChange={setSearchQuery}
               onClearAll={() => {
                 setSelectedCategoryId(undefined);
                 setSelectedStyleId(undefined);
                 setSelectedBodyPart(undefined);
+                setSearchQuery("");
               }}
             />
             <div className="flex gap-2">
@@ -350,6 +369,7 @@ export default function Home() {
                   setSelectedCategoryId(undefined);
                   setSelectedStyleId(undefined);
                   setSelectedBodyPart(undefined);
+                  setSearchQuery("");
                 }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white/80 border border-white/20 hover:border-white/40"
               >

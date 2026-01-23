@@ -10,9 +10,11 @@ interface TattooFilterProps {
   selectedCategoryId?: number;
   selectedStyleId?: number;
   selectedBodyPart?: string;
+  searchQuery?: string;
   onCategoryChange: (categoryId?: number) => void;
   onStyleChange: (styleId?: number) => void;
   onBodyPartChange: (bodyPart?: string) => void;
+  onSearchChange: (query: string) => void;
   onClearAll?: () => void;
 }
 
@@ -22,9 +24,11 @@ export default function TattooFilter({
   selectedCategoryId,
   selectedStyleId,
   selectedBodyPart,
+  searchQuery = "",
   onCategoryChange,
   onStyleChange,
   onBodyPartChange,
+  onSearchChange,
   onClearAll,
 }: TattooFilterProps) {
   const [expandedCategory, setExpandedCategory] = useState<number | null>(selectedCategoryId || null);
@@ -95,6 +99,20 @@ export default function TattooFilter({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Search Bar */}
+      <div>
+        <label className="block text-xs text-white/40 mb-3 uppercase tracking-[0.15em] font-light">
+          Search
+        </label>
+        <input
+          type="text"
+          placeholder="Search by style, category, or placement..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 text-white placeholder:text-white/40 px-4 py-2 text-sm font-light focus:outline-none focus:border-white/30 transition-colors"
+        />
       </div>
 
       {/* Category Selection */}

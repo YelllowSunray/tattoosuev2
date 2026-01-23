@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
+import CreditsDisplay from "../components/CreditsDisplay";
 
 interface Customer {
   id: string;
@@ -196,6 +197,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user, loading: authLoading } = useAuth();
 
   const loadCustomers = async () => {
@@ -319,6 +321,13 @@ export default function CustomersPage() {
             >
               ← Gallery
             </Link>
+            <CreditsDisplay />
+            <Link
+              href="/credits"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            >
+              Credits
+            </Link>
             <AuthButton />
           </div>
         </div>
@@ -329,62 +338,108 @@ export default function CustomersPage() {
           </div>
         )}
 
-        {customers.length === 0 ? (
-          <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-3">
-            <p className="text-white/70 text-sm">
-              No customers yet. Add your first customer to get started.
-            </p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="text-xs sm:text-sm text-black bg-white border border-white/30 px-4 py-2 rounded-full hover:bg-zinc-200"
-            >
-              + Add Customer
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customers.map((customer) => (
-              <Link
-                key={customer.id}
-                href={`/customers/${customer.id}`}
-                className="border border-white/10 bg-black/70 p-4 hover:bg-black/90 transition-colors"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-lg font-medium text-white flex-1">
-                      {customer.name}
-                    </h3>
-                    {customer.generationCount !== undefined && (
-                      <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
-                        {customer.generationCount} {customer.generationCount === 1 ? "design" : "designs"}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-white/60 space-y-1">
-                    <div className="flex items-center gap-1">
-                      <span>📧</span>
-                      <span className="truncate">{customer.email}</span>
-                    </div>
-                    {customer.phone && (
-                      <div className="flex items-center gap-1">
-                        <span>📞</span>
-                        <span>{customer.phone}</span>
-                      </div>
-                    )}
-                    {customer.notes && (
-                      <div className="text-white/50 mt-2 line-clamp-2">
-                        {customer.notes}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs text-white/50 pt-2 border-t border-white/10">
-                    Created {new Date(customer.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </Link>
-            ))}
+        {/* Search Bar */}
+        {customers.length > 0 && (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search customers by name, email, or phone..."
+              className="w-full bg-black border border-white/30 text-sm px-4 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+            />
           </div>
         )}
+
+        {(() => {
+          // Filter customers based on search query
+          const filteredCustomers = customers.filter((customer) => {
+            if (!searchQuery.trim()) return true;
+            const query = searchQuery.toLowerCase();
+            return (
+              customer.name.toLowerCase().includes(query) ||
+              customer.email.toLowerCase().includes(query) ||
+              (customer.phone && customer.phone.toLowerCase().includes(query))
+            );
+          });
+
+          if (customers.length === 0) {
+            return (
+              <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-3">
+                <p className="text-white/70 text-sm">
+                  No customers yet. Add your first customer to get started.
+                </p>
+                <button
+                  onClick={() => setShowModal(true)}
+                  className="text-xs sm:text-sm text-black bg-white border border-white/30 px-4 py-2 rounded-full hover:bg-zinc-200"
+                >
+                  + Add Customer
+                </button>
+              </div>
+            );
+          }
+
+          if (filteredCustomers.length === 0) {
+            return (
+              <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-3">
+                <p className="text-white/70 text-sm">
+                  No customers found matching &quot;{searchQuery}&quot;
+                </p>
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-4 py-2 rounded-full"
+                >
+                  Clear search
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredCustomers.map((customer) => (
+                <Link
+                  key={customer.id}
+                  href={`/customers/${customer.id}`}
+                  className="border border-white/10 bg-black/70 p-4 hover:bg-black/90 transition-colors"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-lg font-medium text-white flex-1">
+                        {customer.name}
+                      </h3>
+                      {customer.generationCount !== undefined && (
+                        <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
+                          {customer.generationCount} {customer.generationCount === 1 ? "design" : "designs"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-white/60 space-y-1">
+                      <div className="flex items-center gap-1">
+                        <span>📧</span>
+                        <span className="truncate">{customer.email}</span>
+                      </div>
+                      {customer.phone && (
+                        <div className="flex items-center gap-1">
+                          <span>📞</span>
+                          <span>{customer.phone}</span>
+                        </div>
+                      )}
+                      {customer.notes && (
+                        <div className="text-white/50 mt-2 line-clamp-2">
+                          {customer.notes}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-white/50 pt-2 border-t border-white/10">
+                      Created {new Date(customer.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          );
+        })()}
 
         <CustomerModal
           isOpen={showModal}

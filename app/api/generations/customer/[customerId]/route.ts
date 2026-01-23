@@ -22,6 +22,7 @@ export async function GET(
         model: g.model,
         images: g.images,
         imageUrls: g.imageUrls,
+        stencils: g.stencils,
         styleIds: g.styleIds,
         placements: g.placements,
         createdAt: g.createdAt.toISOString(),
