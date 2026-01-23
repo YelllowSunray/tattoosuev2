@@ -6,7 +6,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-12-15.clover",
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+// Get webhook secret and trim any whitespace (common issue when copying from Stripe)
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim() || "";
 
 // Disable body parsing for webhook route - critical for Stripe signature verification
 export const runtime = "nodejs";
@@ -26,10 +27,11 @@ export async function POST(req: NextRequest) {
   try {
     console.log("🔔 Webhook received at", new Date().toISOString());
     
-    if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
+    if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
       console.error("❌ Stripe configuration missing");
       console.error("STRIPE_SECRET_KEY exists:", !!process.env.STRIPE_SECRET_KEY);
-      console.error("STRIPE_WEBHOOK_SECRET exists:", !!process.env.STRIPE_WEBHOOK_SECRET);
+      console.error("STRIPE_WEBHOOK_SECRET exists:", !!webhookSecret);
+      console.error("STRIPE_WEBHOOK_SECRET length:", webhookSecret.length);
       return NextResponse.json(
         { error: "Stripe configuration missing" },
         { status: 500 }
@@ -37,33 +39,58 @@ export async function POST(req: NextRequest) {
     }
     
     // Get raw body as text - critical for signature verification
+    // In Next.js App Router, req.text() should give us the raw body
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
     
     console.log("📦 Body length:", body.length);
+    console.log("📦 Body preview (first 100 chars):", body.substring(0, 100));
     console.log("📦 Signature present:", !!signature);
+    console.log("📦 Webhook secret length:", webhookSecret.length);
+    console.log("📦 Webhook secret starts with:", webhookSecret.substring(0, 5));
     
     if (!signature) {
       console.error("❌ Missing stripe-signature header");
-      console.error("Available headers:", Object.keys(req.headers));
+      const headers: Record<string, string> = {};
+      req.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+      console.error("Available headers:", Object.keys(headers));
       return NextResponse.json(
         { error: "Missing stripe-signature header" },
         { status: 400 }
       );
     }
     
+    // Log signature for debugging (first and last few chars only for security)
+    console.log("📦 Signature preview:", signature.substring(0, 20) + "..." + signature.substring(signature.length - 10));
+    
     let event: Stripe.Event;
     
     try {
+      // Verify the webhook signature
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
       console.log(`✅ Webhook verified: ${event.type} (ID: ${event.id})`);
     } catch (err: any) {
       console.error("❌ Webhook signature verification failed:", err.message);
+      console.error("Error type:", err.constructor.name);
       console.error("Webhook secret configured:", !!webhookSecret);
+      console.error("Webhook secret length:", webhookSecret.length);
       console.error("Body length:", body.length);
-      console.error("Signature:", signature.substring(0, 20) + "...");
+      console.error("Body is empty:", body.length === 0);
+      console.error("Signature length:", signature.length);
+      console.error("Signature preview:", signature.substring(0, 30) + "...");
+      
+      // Check if webhook secret format is correct
+      if (!webhookSecret.startsWith("whsec_")) {
+        console.error("⚠️ WARNING: Webhook secret should start with 'whsec_'");
+      }
+      
       return NextResponse.json(
-        { error: `Webhook Error: ${err.message}` },
+        { 
+          error: `Webhook signature verification failed: ${err.message}`,
+          hint: "Check that STRIPE_WEBHOOK_SECRET matches the signing secret from Stripe Dashboard"
+        },
         { status: 400 }
       );
     }

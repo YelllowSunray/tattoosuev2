@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
       },
     });
     
+    console.log(`💳 Created checkout session: ${session.id}`);
+    console.log(`📦 Metadata: userId=${userId}, credits=${creditPackage.credits}`);
+    console.log(`🔗 Session URL: ${session.url}`);
+    
     return NextResponse.json({
       success: true,
       sessionId: session.id,
