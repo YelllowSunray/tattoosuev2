@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
@@ -17,11 +17,16 @@ export default function CreditsPage() {
   const [creditsData, setCreditsData] = useState<CreditsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const previousCreditsRef = useRef<number>(0);
 
-  const fetchCredits = async () => {
+  const fetchCredits = useCallback(async (showLoading = false) => {
     if (!user) {
       setLoading(false);
       return;
+    }
+
+    if (showLoading) {
+      setLoading(true);
     }
 
     try {
@@ -35,13 +40,16 @@ export default function CreditsPage() {
       if (res.ok) {
         const data = await res.json();
         setCreditsData(data);
+        previousCreditsRef.current = data.credits;
+      } else {
+        console.error("Failed to fetch credits:", res.status, res.statusText);
       }
     } catch (error) {
       console.error("Error fetching credits:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   // Check for Stripe redirect success/cancel
   useEffect(() => {
@@ -49,25 +57,60 @@ export default function CreditsPage() {
       const params = new URLSearchParams(window.location.search);
       if (params.get("success") === "true") {
         const credits = params.get("credits");
-        setMessage(`Successfully purchased ${credits} credits! Your balance has been updated.`);
-        // Refresh credits
-        fetchCredits();
-        // Clean URL
+        setMessage(`Payment successful! Processing ${credits} credits... This may take a few seconds.`);
+        
+        // Clean URL immediately
         window.history.replaceState({}, "", "/credits");
+        
+        // Wait a moment for webhook to process, then refresh with retries
+        const checkCredits = async (attempt = 1, maxAttempts = 10) => {
+          // Wait 2 seconds before first check, then 1 second between retries
+          await new Promise(resolve => setTimeout(resolve, attempt === 1 ? 2000 : 1000));
+          
+          await fetchCredits(true);
+          
+          // Check if credits were added (compare with previous total)
+          const token = await user.getIdToken();
+          const res = await fetch("/api/users/credits", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          
+          if (res.ok) {
+            const data = await res.json();
+            const previousCredits = previousCreditsRef.current;
+            const expectedCredits = previousCredits + parseInt(credits || "0");
+            
+            if (data.credits >= expectedCredits || attempt >= maxAttempts) {
+              if (data.credits >= expectedCredits) {
+                setMessage(`Successfully purchased ${credits} credits! Your balance has been updated.`);
+              } else {
+                setMessage(`Payment received! Credits are being processed. If they don't appear, please refresh the page.`);
+              }
+            } else {
+              // Retry
+              checkCredits(attempt + 1, maxAttempts);
+            }
+          } else if (attempt < maxAttempts) {
+            // Retry on error
+            checkCredits(attempt + 1, maxAttempts);
+          }
+        };
+        
+        checkCredits();
       } else if (params.get("canceled") === "true") {
         setMessage("Payment was canceled.");
         window.history.replaceState({}, "", "/credits");
       }
     }
-  }, [user]);
+  }, [user, fetchCredits]);
 
   useEffect(() => {
     fetchCredits();
     
     // Refresh credits every 30 seconds
-    const interval = setInterval(fetchCredits, 30000);
+    const interval = setInterval(() => fetchCredits(false), 30000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, fetchCredits]);
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -137,14 +180,23 @@ export default function CreditsPage() {
           <div className="space-y-8">
             {/* Success/Cancel Message */}
             {message && (
-              <div className="border border-white/20 bg-black/60 p-4 text-sm text-white/80">
-                {message}
-                <button
-                  onClick={() => setMessage(null)}
-                  className="ml-4 text-xs text-white/60 hover:text-white/80"
-                >
-                  ×
-                </button>
+              <div className="border border-white/20 bg-black/60 p-4 text-sm text-white/80 flex items-center justify-between">
+                <span>{message}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => fetchCredits(true)}
+                    className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-2 py-1 rounded"
+                    title="Refresh credits"
+                  >
+                    ↻ Refresh
+                  </button>
+                  <button
+                    onClick={() => setMessage(null)}
+                    className="text-xs text-white/60 hover:text-white/80"
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
             )}
             
@@ -157,7 +209,25 @@ export default function CreditsPage() {
                 Manage your credits and purchase more to generate tattoo designs.
               </p>
               
-              {loading ? (
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white/60"></div>
+                      <span className="text-sm text-white/60">Loading credits...</span>
+                    </div>
+                  ) : null}
+                </div>
+                <button
+                  onClick={() => fetchCredits(true)}
+                  className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-3 py-1.5 rounded transition-colors"
+                  title="Refresh credits"
+                >
+                  ↻ Refresh
+                </button>
+              </div>
+              
+              {loading && !creditsData ? (
                 <div className="flex items-center gap-2">
                   <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white/60"></div>
                   <span className="text-sm text-white/60">Loading credits...</span>

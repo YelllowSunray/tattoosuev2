@@ -12,12 +12,24 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Test endpoint to verify route is accessible
+export async function GET() {
+  return NextResponse.json({ 
+    message: "Stripe webhook endpoint is active",
+    timestamp: new Date().toISOString(),
+  });
+}
+
 export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  
   try {
-    console.log("🔔 Webhook received");
+    console.log("🔔 Webhook received at", new Date().toISOString());
     
     if (!process.env.STRIPE_SECRET_KEY || !process.env.STRIPE_WEBHOOK_SECRET) {
       console.error("❌ Stripe configuration missing");
+      console.error("STRIPE_SECRET_KEY exists:", !!process.env.STRIPE_SECRET_KEY);
+      console.error("STRIPE_WEBHOOK_SECRET exists:", !!process.env.STRIPE_WEBHOOK_SECRET);
       return NextResponse.json(
         { error: "Stripe configuration missing" },
         { status: 500 }
@@ -28,8 +40,12 @@ export async function POST(req: NextRequest) {
     const body = await req.text();
     const signature = req.headers.get("stripe-signature");
     
+    console.log("📦 Body length:", body.length);
+    console.log("📦 Signature present:", !!signature);
+    
     if (!signature) {
       console.error("❌ Missing stripe-signature header");
+      console.error("Available headers:", Object.keys(req.headers));
       return NextResponse.json(
         { error: "Missing stripe-signature header" },
         { status: 400 }
@@ -80,11 +96,13 @@ export async function POST(req: NextRequest) {
       
       try {
         await addCredits(userId, credits, "stripe_purchase");
-        console.log(`✅ Successfully added ${credits} credits to user ${userId}`);
+        const duration = Date.now() - startTime;
+        console.log(`✅ Successfully added ${credits} credits to user ${userId} (took ${duration}ms)`);
         return NextResponse.json({ 
           received: true,
-          message: `Added ${credits} credits to user ${userId}` 
-        });
+          message: `Added ${credits} credits to user ${userId}`,
+          duration: `${duration}ms`,
+        }, { status: 200 });
       } catch (error: any) {
         console.error("❌ Error adding credits:", error);
         console.error("Error stack:", error.stack);
@@ -96,11 +114,13 @@ export async function POST(req: NextRequest) {
     } else {
       // Return success for unhandled events (Stripe expects 200 response)
       console.log(`ℹ️ Unhandled event type: ${event.type} (ID: ${event.id})`);
-      return NextResponse.json({ received: true, eventType: event.type });
+      return NextResponse.json({ received: true, eventType: event.type }, { status: 200 });
     }
   } catch (error: any) {
+    const duration = Date.now() - startTime;
     console.error("❌ Unexpected error in webhook handler:", error);
     console.error("Error stack:", error.stack);
+    console.error("Error occurred after", duration, "ms");
     return NextResponse.json(
       { error: `Internal server error: ${error.message}` },
       { status: 500 }
