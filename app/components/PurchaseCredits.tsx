@@ -7,6 +7,7 @@ import { loadStripe } from "@stripe/stripe-js";
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const CREDIT_PACKAGES = [
+  { credits: 10, price: 1.00 },
   { credits: 100, price: 10.00 },
   { credits: 200, price: 20.00 },
   { credits: 500, price: 50.00 },

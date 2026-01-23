@@ -8,6 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Credit packages
 const CREDIT_PACKAGES = [
+  { credits: 10, price: 100 }, // €1.00 for 10 credits
   { credits: 100, price: 1000 }, // €10.00 for 100 credits
   { credits: 200, price: 2000 }, // €20.00 for 200 credits
   { credits: 500, price: 5000 }, // €50.00 for 500 credits
