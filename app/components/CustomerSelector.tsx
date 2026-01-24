@@ -68,6 +68,9 @@ export default function CustomerSelector({
     };
   }, []);
 
+  // Get 3 most recent customers (customers are already sorted by createdAt desc from API)
+  const recentCustomers = customers.slice(0, 3);
+
   const filteredCustomers = customers.filter((customer) => {
     if (!searchQuery.trim()) return false;
     const query = searchQuery.toLowerCase();
@@ -133,16 +136,12 @@ export default function CustomerSelector({
               setShowResults(true);
             }}
             onFocus={() => {
-              if (searchQuery.trim() || customers.length > 0) {
-                setShowResults(true);
-              }
+              setShowResults(true);
             }}
             placeholder={
               selectedCustomer 
                 ? "Search for another customer..." 
-                : customers.length === 0 
-                  ? "First create a customer on the customer page OR click \"For Me\" for personal design for you"
-                  : "Search customers by name, email, or phone..."
+                : "Create customer on customer page OR click 'For Me' for personal design"
             }
             className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white"
           />
@@ -153,9 +152,57 @@ export default function CustomerSelector({
           <div className="absolute z-50 w-full mt-1 bg-black border border-white/30 max-h-60 overflow-y-auto">
             {loading ? (
               <div className="p-3 text-xs text-white/50 text-center">Loading...</div>
-            ) : filteredCustomers.length > 0 ? (
+            ) : searchQuery.trim() ? (
+              // Show filtered results when searching
+              filteredCustomers.length > 0 ? (
+                <div className="p-2 space-y-1">
+                  {filteredCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => handleSelect(customer.id)}
+                      className={`w-full text-left px-3 py-2 text-xs sm:text-sm transition-colors ${
+                        selectedCustomerId === customer.id
+                          ? "bg-white/20 text-white/50 cursor-not-allowed"
+                          : "text-white/80 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{customer.name}</div>
+                          <div className="text-white/50 text-[11px]">{customer.email}</div>
+                          {customer.phone && (
+                            <div className="text-white/40 text-[10px]">{customer.phone}</div>
+                          )}
+                        </div>
+                        {selectedCustomerId === customer.id && (
+                          <span className="text-white/40 text-[10px]">Selected</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 text-xs text-white/50 text-center space-y-2">
+                  <div>No customers found matching &quot;{searchQuery}&quot;</div>
+                  {onCreateNew && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onCreateNew();
+                        setShowResults(false);
+                      }}
+                      className="text-white hover:text-white/80 underline text-xs"
+                    >
+                      Create new customer
+                    </button>
+                  )}
+                </div>
+              )
+            ) : recentCustomers.length > 0 ? (
+              // Show 3 most recent customers when field is clicked (no search query)
               <div className="p-2 space-y-1">
-                {filteredCustomers.map((customer) => (
+                {recentCustomers.map((customer) => (
                   <button
                     key={customer.id}
                     type="button"
@@ -181,25 +228,9 @@ export default function CustomerSelector({
                   </button>
                 ))}
               </div>
-            ) : searchQuery.trim() ? (
-              <div className="p-3 text-xs text-white/50 text-center space-y-2">
-                <div>No customers found matching &quot;{searchQuery}&quot;</div>
-                {onCreateNew && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onCreateNew();
-                      setShowResults(false);
-                    }}
-                    className="text-white hover:text-white/80 underline text-xs"
-                  >
-                    Create new customer
-                  </button>
-                )}
-              </div>
             ) : (
               <div className="p-3 text-xs text-white/50 text-center">
-                Start typing to search for customers
+                No customers found. Create a customer on the customers page.
               </div>
             )}
           </div>

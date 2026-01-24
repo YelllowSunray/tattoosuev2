@@ -22,7 +22,7 @@ export default function Home() {
   const [bodyParts, setBodyParts] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedStyleId, setSelectedStyleId] = useState<number | undefined>();
-  const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>();
+  const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>("chest");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
@@ -104,7 +104,7 @@ export default function Home() {
     setVisibleCount(200);
   }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://your-domain.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sujathascompass.com';
   const siteName = "Sue's Tattoo Studio";
 
   // Structured data for SEO
@@ -138,6 +138,19 @@ export default function Home() {
     ],
   };
 
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: siteUrl,
+      },
+    ],
+  };
+
   return (
     <div className="min-h-screen bg-black">
       {/* Structured Data for SEO */}
@@ -153,6 +166,13 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(organizationData),
+        }}
+      />
+      <Script
+        id="breadcrumb-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbData),
         }}
       />
       

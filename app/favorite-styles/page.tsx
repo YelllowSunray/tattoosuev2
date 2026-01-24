@@ -31,6 +31,36 @@ function FavoriteStylesContent() {
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(200);
 
+  // Check localStorage for placement from generate page and set default
+  useEffect(() => {
+    const savedState = localStorage.getItem("generateFormState");
+    if (savedState) {
+      try {
+        const formState = JSON.parse(savedState);
+        // If "Other" was selected (showCustomPlacement is true), default to "chest"
+        if (formState.showCustomPlacement) {
+          setSelectedBodyPart("chest");
+        } 
+        // If a placement was selected, use the first one (convert to lowercase)
+        else if (formState.selectedPlacements && formState.selectedPlacements.length > 0) {
+          const placement = formState.selectedPlacements[0].toLowerCase();
+          setSelectedBodyPart(placement);
+        }
+        // If no placement was selected, default to "chest"
+        else {
+          setSelectedBodyPart("chest");
+        }
+      } catch (e) {
+        console.error("Error parsing form state:", e);
+        // Default to chest if parsing fails
+        setSelectedBodyPart("chest");
+      }
+    } else {
+      // No saved state, default to chest
+      setSelectedBodyPart("chest");
+    }
+  }, []);
+
   // Load favorite styles from Firebase
   useEffect(() => {
     async function loadFavoriteStyles() {

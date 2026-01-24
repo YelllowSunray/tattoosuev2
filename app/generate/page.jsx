@@ -48,7 +48,7 @@ export default function GeneratePage() {
   const [customPlacement, setCustomPlacement] = useState("");
   const [showCustomPlacement, setShowCustomPlacement] = useState(false);
   const [referenceImages, setReferenceImages] = useState([]);
-  const [referenceImageType, setReferenceImageType] = useState("placement"); // "placement" or "subject"
+  const [referenceImageType, setReferenceImageType] = useState(""); // "placement", "subject", or "" (none selected)
   const [styleSearchQuery, setStyleSearchQuery] = useState("");
   const [showStyleSearchResults, setShowStyleSearchResults] = useState(false);
   const [selectedColor, setSelectedColor] = useState("");
@@ -60,6 +60,7 @@ export default function GeneratePage() {
   const [customSize, setCustomSize] = useState("");
   const [numberOfImages, setNumberOfImages] = useState(2);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [selectedCustomerName, setSelectedCustomerName] = useState(null);
   const [isForMe, setIsForMe] = useState(false);
   const [isGeneratingStencils, setIsGeneratingStencils] = useState(false);
   const [stencils, setStencils] = useState(null);
@@ -68,7 +69,31 @@ export default function GeneratePage() {
   const [showReferenceImageInfo, setShowReferenceImageInfo] = useState(false);
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [formWasReset, setFormWasReset] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const { user, loading: authLoading } = useAuth();
+
+  // Handle keyboard navigation for image modal
+  useEffect(() => {
+    if (selectedImageIndex === null || !images || images.length === 0) {
+      return;
+    }
+    
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedImageIndex(null);
+      } else if (e.key === "ArrowLeft" && images.length > 1) {
+        e.preventDefault();
+        setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : images.length - 1);
+      } else if (e.key === "ArrowRight" && images.length > 1) {
+        e.preventDefault();
+        setSelectedImageIndex(selectedImageIndex < images.length - 1 ? selectedImageIndex + 1 : 0);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedImageIndex, images?.length ?? 0]);
 
   const handlePortraitChange = (e) => {
     const files = e.target.files;
@@ -186,29 +211,58 @@ export default function GeneratePage() {
   }, [user]);
 
   // Fetch user credits
-  const fetchUserCredits = async () => {
-    if (!user) return;
-    try {
-      const token = await user.getIdToken();
-      const res = await fetch("/api/users/credits", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUserCredits(data.credits);
-      }
-    } catch (error) {
-      console.error("Error fetching credits:", error);
-    }
-  };
-
   useEffect(() => {
-    if (user) {
-      fetchUserCredits();
+    if (!user) return;
+    
+    async function fetchUserCredits() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/credits", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUserCredits(data.credits);
+        }
+      } catch (error) {
+        console.error("Error fetching credits:", error);
+      }
     }
+    
+    fetchUserCredits();
   }, [user]);
+
+  // Fetch customer name when selectedCustomerId changes
+  useEffect(() => {
+    if (!user || !selectedCustomerId || isForMe) {
+      setSelectedCustomerName(null);
+      return;
+    }
+    
+    async function fetchCustomerName() {
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(`/api/customers/${selectedCustomerId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSelectedCustomerName(data.customer?.name || null);
+        } else {
+          setSelectedCustomerName(null);
+        }
+      } catch (error) {
+        console.error("Error fetching customer name:", error);
+        setSelectedCustomerName(null);
+      }
+    }
+    
+    fetchCustomerName();
+  }, [user, selectedCustomerId, isForMe]);
 
   // Restore form state when returning from favorite styles page
   useEffect(() => {
@@ -427,21 +481,21 @@ export default function GeneratePage() {
 
       // Add color selection
       if (selectedColor === "custom" && customColor.trim()) {
-        extraParts.push(`color: ${customColor.trim()}`);
+        extraParts.push(`tattoo color: ${customColor.trim()}`);
       } else if (selectedColor === "black-grey") {
-        extraParts.push("color: black and grey");
+        extraParts.push("tattoo color: black and grey");
       } else if (selectedColor === "full-color") {
-        extraParts.push("color: full color");
+        extraParts.push("tattoo color: full color");
       } else if (selectedColor === "natural-palette") {
-        extraParts.push("color: natural palette");
+        extraParts.push("tattoo color: natural palette");
       } else if (selectedColor === "monochromatic" && monochromaticColor.trim()) {
-        extraParts.push(`color: monochromatic ${monochromaticColor.trim()}`);
+        extraParts.push(`tattoo color: monochromatic ${monochromaticColor.trim()}`);
       } else if (selectedColor === "monochromatic") {
-        extraParts.push("color: monochromatic");
+        extraParts.push("tattoo color: monochromatic");
       } else if (selectedColor === "sepia-vintage") {
-        extraParts.push("color: sepia / vintage palette");
+        extraParts.push("tattoo color: sepia / vintage palette");
       } else if (selectedColor === "white-ink") {
-        extraParts.push("color: white ink");
+        extraParts.push("tattoo color: white ink");
       }
 
       // Add skin color selection
@@ -907,7 +961,7 @@ export default function GeneratePage() {
     setCustomPlacement("");
     setShowCustomPlacement(false);
     setReferenceImages([]);
-    setReferenceImageType("placement");
+    setReferenceImageType("");
     setStyleSearchQuery("");
     setShowStyleSearchResults(false);
     setSelectedColor("");
@@ -919,6 +973,7 @@ export default function GeneratePage() {
     setCustomSize("");
     setNumberOfImages(2);
     setSelectedCustomerId(null);
+    setSelectedCustomerName(null);
     setIsForMe(false);
     setImages(null);
     setStencils(null);
@@ -1047,7 +1102,7 @@ export default function GeneratePage() {
                 ? "text-white font-semibold" 
                 : "text-white/60 font-normal"
             }`}>
-              Customer <span className="text-red-400">*</span>
+              Customer <span className="text-red-400">(Mandatory)</span>
             </label>
             <div className="flex items-center gap-2">
               {isForMe ? (
@@ -1669,7 +1724,7 @@ export default function GeneratePage() {
             <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  {renderLabel("Reference Image (optional)", referenceImages.length > 0)}
+                  {renderLabel("Reference Image (optional)", referenceImages.filter(img => img.type === referenceImageType).length > 0 && referenceImageType !== "")}
                   <button
                     type="button"
                     onClick={() => setShowReferenceImageInfo(!showReferenceImageInfo)}
@@ -1719,9 +1774,16 @@ export default function GeneratePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      // Clear all images when switching types
-                      setReferenceImages([]);
-                      setReferenceImageType("placement");
+                      // Toggle: if already selected, deselect; otherwise select and clear other type's images
+                      if (referenceImageType === "placement") {
+                        setReferenceImageType("");
+                        // Clear only placement images when deselecting
+                        setReferenceImages(prev => prev.filter(img => img.type !== "placement"));
+                      } else {
+                        setReferenceImageType("placement");
+                        // Clear subject images when switching to placement
+                        setReferenceImages(prev => prev.filter(img => img.type !== "subject"));
+                      }
                     }}
                     className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                       referenceImageType === "placement"
@@ -1735,9 +1797,16 @@ export default function GeneratePage() {
                   <button
                     type="button"
                     onClick={() => {
-                      // Clear all images when switching types
-                      setReferenceImages([]);
-                      setReferenceImageType("subject");
+                      // Toggle: if already selected, deselect; otherwise select and clear other type's images
+                      if (referenceImageType === "subject") {
+                        setReferenceImageType("");
+                        // Clear only subject images when deselecting
+                        setReferenceImages(prev => prev.filter(img => img.type !== "subject"));
+                      } else {
+                        setReferenceImageType("subject");
+                        // Clear placement images when switching to subject
+                        setReferenceImages(prev => prev.filter(img => img.type !== "placement"));
+                      }
                     }}
                     className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                       referenceImageType === "subject"
@@ -1750,22 +1819,24 @@ export default function GeneratePage() {
                 </div>
               </div>
               
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePortraitChange}
-                className="block w-full text-xs text-white/70 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-white file:text-black hover:file:bg-zinc-200"
-              />
-              {referenceImages.length > 0 && (
+              {/* Only show file input when a type is selected */}
+              {referenceImageType && (
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handlePortraitChange}
+                  className={`block w-full text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-medium transition-colors ${
+                    referenceImages.filter(img => img.type === referenceImageType).length > 0
+                      ? "text-white/70 file:bg-white file:text-black hover:file:bg-zinc-200"
+                      : "text-white/70 file:bg-black file:text-white file:border file:border-white/30 hover:file:bg-black/80"
+                  }`}
+                />
+              )}
+              {referenceImageType && referenceImages.filter(img => img.type === referenceImageType).length > 0 && (
                 <div className="mt-2 space-y-2">
                   <p className="text-[11px] text-white/50">
-                    {referenceImages.length} image{referenceImages.length > 1 ? "s" : ""} total
-                    {referenceImages.filter(img => img.type === referenceImageType).length > 0 && (
-                      <span className="ml-1">
-                        ({referenceImages.filter(img => img.type === referenceImageType).length} {referenceImageType})
-                      </span>
-                    )}
+                    {referenceImages.filter(img => img.type === referenceImageType).length} {referenceImageType} image{referenceImages.filter(img => img.type === referenceImageType).length > 1 ? "s" : ""}
                   </p>
                   <div className="space-y-2">
                     {/* Show images for current type */}
@@ -1807,7 +1878,7 @@ export default function GeneratePage() {
                       </div>
                     )}
                     {/* Show images for other type (if any) */}
-                    {referenceImages.filter(img => img.type !== referenceImageType).length > 0 && (
+                    {referenceImageType && referenceImages.filter(img => img.type !== referenceImageType).length > 0 && (
                       <div>
                         <p className="text-[10px] text-white/30 mb-1 uppercase">
                           {referenceImageType === "placement" ? "Subject Photos" : "Placement Photos"} (switch type to see)
@@ -1871,7 +1942,7 @@ export default function GeneratePage() {
                 ? "text-white font-semibold" 
                 : "text-white/60 font-normal"
             }`}>
-              Prompt <span className="text-red-400">*</span>
+              SUBJECT/DESIGN ELEMENTS (e.g. wolves) <span className="text-red-400">(Mandatory)</span>
             </label>
             <textarea
               value={prompt}
@@ -1924,6 +1995,137 @@ export default function GeneratePage() {
             const showPromptHelp = missingPrompt && !missingCustomer && hasEnoughCredits;
             const isButtonEnabled = !isGenerating && !missingPrompt && !missingCustomer && !insufficientCredits;
             
+            // Build summary of choices (in same order as form)
+            const buildSummary = () => {
+              const parts = [];
+              
+              // 1. Customer (always show)
+              if (isForMe) {
+                parts.push("Customer: For Me");
+              } else if (selectedCustomerId && selectedCustomerName) {
+                parts.push(`Customer: ${selectedCustomerName}`);
+              } else if (selectedCustomerId) {
+                parts.push("Customer: Selected");
+              } else {
+                parts.push("Customer: Not set");
+              }
+              
+              // 2. Placement (always show)
+              if (showCustomPlacement && customPlacement.trim()) {
+                parts.push(`Placement: ${customPlacement.trim()}`);
+              } else if (selectedPlacements.length > 0) {
+                const placements = selectedPlacements.length <= 2
+                  ? selectedPlacements.join(", ")
+                  : `${selectedPlacements[0]} and ${selectedPlacements.length - 1} more`;
+                parts.push(`Placement: ${placements}`);
+              } else {
+                parts.push("Placement: Not set");
+              }
+              
+              // 3. Style(s) (always show)
+              if (selectedStyleIds.length > 0) {
+                const selectedStyles = TATTOO_CATEGORIES.flatMap((c) =>
+                  (c.styles || []).filter((s) => selectedStyleIds.includes(s.id))
+                );
+                if (selectedStyles.length > 0) {
+                  const styleNames = selectedStyles.length <= 2
+                    ? selectedStyles.map((s) => s.name).join(", ")
+                    : `${selectedStyles[0].name} and ${selectedStyles.length - 1} more`;
+                  parts.push(`Style: ${styleNames}`);
+                } else {
+                  parts.push("Style: Not set");
+                }
+              } else if (selectedCategoryId) {
+                const category = TATTOO_CATEGORIES.find((c) => c.id === selectedCategoryId);
+                if (category) {
+                  parts.push(`Category: ${category.name}`);
+                } else {
+                  parts.push("Style: Not set");
+                }
+              } else {
+                parts.push("Style: Not set");
+              }
+              
+              // 4. Size (always show)
+              if (selectedSize === "other" && customSize.trim()) {
+                parts.push(`Size: ${customSize.trim()}`);
+              } else if (selectedSize === "S") {
+                parts.push("Size: S (5-10cm)");
+              } else if (selectedSize === "M") {
+                parts.push("Size: M (10-15cm)");
+              } else if (selectedSize === "L") {
+                parts.push("Size: L (>15cm)");
+              } else if (selectedSize === "XL") {
+                parts.push("Size: XL (>20cm)");
+              } else {
+                parts.push("Size: Not set");
+              }
+              
+              // 5. Color (always show)
+              if (selectedColor === "custom" && customColor.trim()) {
+                parts.push(`Color: ${customColor.trim()}`);
+              } else if (selectedColor === "black-grey") {
+                parts.push("Color: Black & Grey");
+              } else if (selectedColor === "full-color") {
+                parts.push("Color: Full Color");
+              } else if (selectedColor === "natural-palette") {
+                parts.push("Color: Natural Palette");
+              } else if (selectedColor === "monochromatic") {
+                if (monochromaticColor.trim()) {
+                  parts.push(`Color: Monochromatic ${monochromaticColor.trim()}`);
+                } else {
+                  parts.push("Color: Monochromatic");
+                }
+              } else if (selectedColor === "sepia-vintage") {
+                parts.push("Color: Sepia/Vintage");
+              } else if (selectedColor === "white-ink") {
+                parts.push("Color: White Ink");
+              } else {
+                parts.push("Color: Not set");
+              }
+              
+              // 6. Reference Image (always show - only applicable for nanobanana/gemini25)
+              const placementImages = referenceImages.filter(img => img.type === "placement");
+              const subjectImages = referenceImages.filter(img => img.type === "subject");
+              if (placementImages.length > 0) {
+                parts.push(`Reference Image: Placement (${placementImages.length} image${placementImages.length > 1 ? "s" : ""})`);
+              } else if (subjectImages.length > 0) {
+                parts.push(`Reference Image: Subject (${subjectImages.length} image${subjectImages.length > 1 ? "s" : ""})`);
+              } else {
+                parts.push("Reference Image: Not set");
+              }
+              
+              // 7. Skin Color (always show)
+              if (selectedSkinColor) {
+                const skinColorLabels = {
+                  "light": "Light",
+                  "light-medium": "Light Medium",
+                  "medium": "Medium",
+                  "medium-dark": "Medium Dark",
+                  "dark": "Dark",
+                  "very-dark": "Very Dark",
+                };
+                parts.push(`Skin Color: ${skinColorLabels[selectedSkinColor] || selectedSkinColor}`);
+              } else {
+                parts.push("Skin Color: Not set");
+              }
+              
+              // 8. Subject/Design Elements (always show)
+              if (prompt.trim()) {
+                const promptPreview = prompt.trim().length > 50 
+                  ? prompt.trim().substring(0, 50) + "..." 
+                  : prompt.trim();
+                parts.push(`Subject: "${promptPreview}"`);
+              } else {
+                parts.push("Subject: Not set");
+              }
+              
+              // 9. Number of images (always show - has default)
+              parts.push(`Quantity: ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}`);
+              
+              return parts.join(" • ");
+            };
+            
             return (
               <div className="space-y-2">
                 <button
@@ -1944,9 +2146,16 @@ export default function GeneratePage() {
                       : missingCustomer && hasEnoughCredits
                         ? "Fill in Customer Field"
                         : missingPrompt && !missingCustomer && hasEnoughCredits
-                          ? "Fill in Prompt Field"
+                          ? "Fill in Subject/Design Elements Field"
                           : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${requiredCredits} credit${requiredCredits > 1 ? "s" : ""}`}
                 </button>
+                {isButtonEnabled && !isGenerating && (
+                  <div className="mt-3 p-4 bg-black/40 border border-white/20 rounded max-w-2xl">
+                    <p className="text-sm text-white/80 leading-relaxed font-medium">
+                      {buildSummary()}
+                    </p>
+                  </div>
+                )}
                 {showCustomerHelp && (
                   <p className="text-xs text-white/60 max-w-md">
                     Either create a customer on the{" "}
@@ -1969,7 +2178,7 @@ export default function GeneratePage() {
                 )}
                 {showPromptHelp && (
                   <p className="text-xs text-white/60 max-w-md">
-                    The Prompt field is mandatory, please fill something in like a &quot;howling wolf&quot; or &quot;a beautiful giraffe&quot;.
+                    The Subject/Design Elements field is mandatory, please fill something in like a &quot;howling wolf&quot; or &quot;a beautiful giraffe&quot;.
                   </p>
                 )}
               </div>
@@ -2016,7 +2225,8 @@ export default function GeneratePage() {
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className="border border-white/15 bg-black/60 p-2 flex items-center justify-center"
+                  className="border border-white/15 bg-black/60 p-2 flex items-center justify-center cursor-pointer hover:border-white/30 transition-colors"
+                  onClick={() => setSelectedImageIndex(idx)}
                 >
                   <img
                     src={img}
@@ -2026,6 +2236,75 @@ export default function GeneratePage() {
                 </div>
               ))}
             </div>
+            
+            {/* Modal for enlarged image view */}
+            {selectedImageIndex !== null && images && images[selectedImageIndex] && (
+              <div
+                className="fixed inset-0 z-[9997] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-sm"
+                onClick={() => setSelectedImageIndex(null)}
+              >
+                <div
+                  className="max-w-6xl w-full max-h-[90vh] overflow-y-auto relative"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="bg-black border border-white/10 p-4 sm:p-8 md:p-12">
+                    {/* Close button */}
+                    <button
+                      onClick={() => setSelectedImageIndex(null)}
+                      className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/40 hover:text-white/80 text-3xl font-light w-10 h-10 flex items-center justify-center transition-colors z-10 min-h-[44px] min-w-[44px]"
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+
+                    {/* Main image */}
+                    <div className="mb-6">
+                      <div className="relative aspect-square max-w-2xl mx-auto border border-white/10">
+                        <img
+                          src={images[selectedImageIndex]}
+                          alt={`Generated tattoo design ${selectedImageIndex + 1}`}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="mt-6 text-center">
+                        <h3 className="text-2xl sm:text-3xl md:text-4xl font-light text-white mb-2 tracking-tight">
+                          Generated Design {selectedImageIndex + 1} of {images.length}
+                        </h3>
+                      </div>
+                    </div>
+
+                    {/* Navigation arrows */}
+                    {images.length > 1 && (
+                      <div className="flex items-center justify-between mt-6">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : images.length - 1);
+                          }}
+                          className="px-4 py-2 text-white/70 hover:text-white border border-white/30 hover:border-white/50 transition-colors min-h-[44px]"
+                          aria-label="Previous image"
+                        >
+                          ← Previous
+                        </button>
+                        <span className="text-white/50 text-sm">
+                          {selectedImageIndex + 1} / {images.length}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedImageIndex(selectedImageIndex < images.length - 1 ? selectedImageIndex + 1 : 0);
+                          }}
+                          className="px-4 py-2 text-white/70 hover:text-white border border-white/30 hover:border-white/50 transition-colors min-h-[44px]"
+                          aria-label="Next image"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
