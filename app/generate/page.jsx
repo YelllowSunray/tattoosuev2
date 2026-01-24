@@ -810,11 +810,12 @@ export default function GeneratePage() {
           try {
             // Don't store full base64 referenceImages data - it's too large and causes stack overflow
             // Only store metadata (file names, types) if needed for reference
+            // Use userMode as source of truth instead of isForMe to avoid race conditions
             const generationData = {
-              customerId: isForMe ? "personal" : selectedCustomerId,
+              customerId: (userMode === "individual") ? "personal" : (selectedCustomerId || "personal"),
               userId: user.uid,
-              prompt: prompt.trim(),
-              fullPrompt: fullPrompt,
+              prompt: prompt.trim() || "Untitled design", // Ensure prompt is never empty
+              fullPrompt: fullPrompt || prompt.trim() || "Untitled design", // Fallback to prompt if fullPrompt is empty/undefined
               model: selectedModel,
               images: imagePaths, // Firebase Storage paths only
               imageUrls: [], // Empty - we don't store base64 data in Firestore
@@ -832,10 +833,24 @@ export default function GeneratePage() {
                 : undefined,
             };
             
+            // Add validation before sending to catch issues early
+            if (!generationData.customerId || !generationData.fullPrompt || !generationData.prompt) {
+              console.error("Invalid generation data before API call:", {
+                customerId: generationData.customerId,
+                hasPrompt: !!generationData.prompt,
+                hasFullPrompt: !!generationData.fullPrompt,
+                userMode: userMode,
+                isForMe: isForMe,
+                selectedCustomerId: selectedCustomerId,
+              });
+            }
+            
             console.log("Saving generation metadata with:", {
               customerId: generationData.customerId,
               userId: generationData.userId,
               imagesCount: generationData.images.length,
+              promptLength: generationData.prompt?.length || 0,
+              fullPromptLength: generationData.fullPrompt?.length || 0,
             });
             
             // Get Firebase Auth token for the API request
@@ -876,13 +891,27 @@ export default function GeneratePage() {
                 errorData = { rawError: errorText };
               }
               console.error("Failed to save generation metadata. Status:", generationRes.status, "Error:", errorData);
+              
+              // Log the data that was sent to help debug
+              console.error("Generation data that was sent:", {
+                customerId: generationData.customerId,
+                userId: generationData.userId,
+                hasPrompt: !!generationData.prompt,
+                promptLength: generationData.prompt?.length || 0,
+                hasFullPrompt: !!generationData.fullPrompt,
+                fullPromptLength: generationData.fullPrompt?.length || 0,
+                model: generationData.model,
+                imagesCount: generationData.images?.length || 0,
+                userMode: userMode,
+                isForMe: isForMe,
+              });
             } else {
               const successData = await generationRes.json();
               console.log("Successfully saved generation metadata:", successData);
               // Store generation ID for later stencil linking
               if (successData.generationId) {
                 sessionStorage.setItem('lastGenerationId', successData.generationId);
-                sessionStorage.setItem('lastGenerationCustomerId', selectedCustomerId);
+                sessionStorage.setItem('lastGenerationCustomerId', (userMode === "individual") ? "personal" : selectedCustomerId);
               }
             }
           } catch (err) {
