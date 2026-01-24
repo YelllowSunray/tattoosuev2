@@ -1,14 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import AuthModal from "./AuthModal";
 
 export default function AuthButton() {
   const { user, logout, loading } = useAuth();
   const [showModal, setShowModal] = useState(false);
+  const [forceShow, setForceShow] = useState(false);
 
-  if (loading) {
+  // Add timeout to prevent infinite loading on Vercel
+  // If auth takes more than 2 seconds, assume user is not authenticated and show Sign In button
+  useEffect(() => {
+    if (!loading) {
+      setForceShow(true);
+      return;
+    }
+
+    // After 2 seconds, force show the button even if auth is still loading
+    // This prevents the button from being stuck on "Loading..." on Vercel
+    const timeout = setTimeout(() => {
+      setForceShow(true);
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
+  // Show loading only if auth is loading AND we haven't forced show yet
+  if (loading && !forceShow) {
     return (
       <div className="text-xs sm:text-sm text-white/50 border border-white/30 px-3 py-1.5 rounded-full">
         Loading...

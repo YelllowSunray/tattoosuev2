@@ -1415,12 +1415,6 @@ export default function GeneratePage() {
         </div>
 
         {GENERATION_ENABLED ? (
-          authLoading ? (
-            <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
-              <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mx-auto" />
-              <p className="text-sm text-white/60">Loading...</p>
-            </div>
-          ) : (
           <form onSubmit={handleGenerate} className="space-y-6">
           {/* Customer Selection - Only show in Parlor mode */}
           {userMode === "parlor" && (
@@ -2540,7 +2534,6 @@ export default function GeneratePage() {
             );
           })()}
         </form>
-          )
         ) : (
           <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
             <h2 className="text-xl font-light">Coming Soon</h2>

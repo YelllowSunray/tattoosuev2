@@ -10,8 +10,6 @@ import CreditsDisplay from "./components/CreditsDisplay";
 import MobileNav from "./components/MobileNav";
 import { useAuth } from "@/lib/auth-context";
 import {
-  getAllTattooImages,
-  getUniqueBodyParts,
   filterTattoos,
   TattooImage,
 } from "@/lib/firebase-utils";
@@ -104,10 +102,41 @@ export default function Home() {
     async function loadData() {
       try {
         setLoading(true);
-        const [images, uniqueBodyParts] = await Promise.all([
-          getAllTattooImages(),
-          getUniqueBodyParts(),
-        ]);
+        
+        // Use API route instead of direct Firebase call (works better on Vercel, especially for unauthenticated users)
+        const tattoosResponse = await fetch('/api/get-tattoos');
+        
+        if (!tattoosResponse.ok) {
+          throw new Error(`Failed to fetch tattoos: ${tattoosResponse.statusText}`);
+        }
+
+        const tattoosData = await tattoosResponse.json();
+        
+        if (!tattoosData.success) {
+          throw new Error(tattoosData.error || 'Failed to fetch tattoos');
+        }
+
+        // Transform API response to match TattooImage format
+        const images: TattooImage[] = tattoosData.tattoos.map((t: any) => ({
+          url: t.url,
+          style: t.style || '',
+          bodyPart: t.bodyPart || '',
+          fileName: t.fileName,
+          category: t.category ? {
+            id: t.category.id,
+            name: t.category.name,
+            styles: [], // Not needed for filtering
+          } : undefined,
+          matchedStyle: t.matchedStyle ? {
+            id: t.matchedStyle.id,
+            name: t.matchedStyle.name,
+            keywords: [], // Not needed for filtering
+          } : undefined,
+        }));
+
+        // Calculate unique body parts from images
+        const uniqueBodyParts = Array.from(new Set(images.map(img => img.bodyPart).filter(Boolean))).sort() as string[];
+        setBodyParts(uniqueBodyParts);
 
         // Load prices.json and merge with images
         try {
@@ -139,10 +168,12 @@ export default function Home() {
           setAllImages(images);
           setFilteredImages(images);
         }
-
-        setBodyParts(uniqueBodyParts);
       } catch (error) {
         console.error("Error loading tattoo data:", error);
+        // Set empty arrays to show error state instead of infinite loading
+        setAllImages([]);
+        setFilteredImages([]);
+        setBodyParts([]);
       } finally {
         setLoading(false);
       }
@@ -479,6 +510,19 @@ export default function Home() {
               <div className="text-center">
                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-2 border-white/20 border-t-white/60 mb-6"></div>
                 <p className="text-white/40 text-sm font-light tracking-wide">Loading designs...</p>
+              </div>
+            </div>
+          ) : allImages.length === 0 && !loading ? (
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="text-center">
+                <p className="text-white/60 mb-2 text-base">Failed to load gallery images.</p>
+                <p className="text-white/40 text-sm mb-4">Please check your connection and try refreshing the page.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 text-sm text-white bg-white/10 border border-white/30 rounded-full hover:bg-white/20 transition-colors"
+                >
+                  Refresh Page
+                </button>
               </div>
             </div>
           ) : (
