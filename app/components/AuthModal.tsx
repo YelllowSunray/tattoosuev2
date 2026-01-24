@@ -42,9 +42,9 @@ export default function AuthModal({
         ? signUp(email, password)
         : signIn(email, password);
       
-      // Race against a timeout to prevent infinite loading
+      // Race against a timeout to prevent infinite loading (increased for Vercel)
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 35000);
+        setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 65000);
       });
       
       await Promise.race([authPromise, timeoutPromise]);
