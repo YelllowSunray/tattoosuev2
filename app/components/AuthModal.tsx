@@ -37,17 +37,12 @@ export default function AuthModal({
     setLoading(true);
 
     try {
-      // Add a timeout wrapper to ensure loading state is cleared even if auth hangs
-      const authPromise = isSignUp 
-        ? signUp(email, password)
-        : signIn(email, password);
-      
-      // Race against a timeout to prevent infinite loading (increased for Vercel)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 65000);
-      });
-      
-      await Promise.race([authPromise, timeoutPromise]);
+      // Call auth directly - Firebase has its own timeout handling
+      if (isSignUp) {
+        await signUp(email, password);
+      } else {
+        await signIn(email, password);
+      }
       
       // Only close modal if auth succeeded
       onClose();

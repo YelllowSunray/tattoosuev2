@@ -88,13 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('Safari sign-in attempt - checking Firebase connectivity...');
         }
         
-        // Increase timeout to 60 seconds for Vercel
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Sign in request timed out. Please check your connection and try again.")), 60000);
-        });
-        
-        const signInPromise = signInWithEmailAndPassword(auth, email, password);
-        await Promise.race([signInPromise, timeoutPromise]);
+        // Call Firebase directly - it has its own timeout handling
+        await signInWithEmailAndPassword(auth, email, password);
         
         // Success - return immediately
         if (isSafari) {
@@ -208,13 +203,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        // Increase timeout to 60 seconds for Vercel
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error("Sign up request timed out. Please check your connection and try again.")), 60000);
-        });
-        
-        const signUpPromise = createUserWithEmailAndPassword(auth, email, password);
-        await Promise.race([signUpPromise, timeoutPromise]);
+        // Call Firebase directly - it has its own timeout handling
+        await createUserWithEmailAndPassword(auth, email, password);
         
         // Success - return immediately
         return;
