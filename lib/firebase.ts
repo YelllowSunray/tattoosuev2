@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
-import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Validate required environment variables
@@ -45,17 +45,12 @@ export const storage = getStorage(app);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Safari compatibility and IndexedDB noise suppression
+// IndexedDB noise suppression
+// Note: Removed Safari-specific browserSessionPersistence override because:
+// 1. Previous version worked on custom domains without it
+// 2. browserSessionPersistence can cause issues on custom domains
+// 3. Firebase's default persistence (browserLocalPersistence) works fine
 if (typeof window !== 'undefined') {
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-  // Safari's ITP can make IndexedDB/localStorage unreliable; prefer session persistence
-  if (isSafari) {
-    setPersistence(auth, browserSessionPersistence).catch((error) => {
-      console.warn('Failed to set auth persistence (Safari):', error);
-    });
-  }
-
   // Suppress known Firebase IndexedDB warnings (non-critical)
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;

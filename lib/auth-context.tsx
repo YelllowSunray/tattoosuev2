@@ -106,16 +106,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Enhanced diagnostic logging
         const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+        const currentUrl = typeof window !== 'undefined' ? window.location.href : 'unknown';
         const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+        const referrer = typeof window !== 'undefined' ? document.referrer : '';
+        const wasRedirected = referrer && new URL(referrer).hostname !== currentHost;
         
         console.error('🔴 Sign-in Error Details:', {
           attempt: attempt + 1,
           code: error?.code,
           message: error?.message,
           currentHost,
+          currentUrl,
           authDomain,
           isSafari,
           errorName: error?.name,
+          wasRedirected,
+          referrer: referrer || 'none',
+          cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled : 'unknown',
+          localStorageAvailable: typeof window !== 'undefined' ? (() => {
+            try {
+              localStorage.setItem('test', 'test');
+              localStorage.removeItem('test');
+              return true;
+            } catch {
+              return false;
+            }
+          })() : 'unknown',
         });
         
         // Check for domain authorization errors
@@ -207,15 +223,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         // Enhanced diagnostic logging
         const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+        const currentUrl = typeof window !== 'undefined' ? window.location.href : 'unknown';
         const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+        const referrer = typeof window !== 'undefined' ? document.referrer : '';
+        const wasRedirected = referrer && new URL(referrer).hostname !== currentHost;
         
         console.error('🔴 Sign-up Error Details:', {
           attempt: attempt + 1,
           code: error?.code,
           message: error?.message,
           currentHost,
+          currentUrl,
           authDomain,
           errorName: error?.name,
+          wasRedirected,
+          referrer: referrer || 'none',
+          cookiesEnabled: typeof navigator !== 'undefined' ? navigator.cookieEnabled : 'unknown',
+          localStorageAvailable: typeof window !== 'undefined' ? (() => {
+            try {
+              localStorage.setItem('test', 'test');
+              localStorage.removeItem('test');
+              return true;
+            } catch {
+              return false;
+            }
+          })() : 'unknown',
         });
         
         // Check for domain authorization errors
