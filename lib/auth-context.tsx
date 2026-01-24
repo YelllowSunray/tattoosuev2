@@ -28,12 +28,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
+    // Handle unhandled promise rejections from Firebase IndexedDB errors
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      // Suppress known Firebase IndexedDB errors (non-critical)
+      if (event.reason?.message?.includes('IndexedDB') || 
+          event.reason?.code === 'app/idb-get' ||
+          event.reason?.name === 'AbortError') {
+        event.preventDefault(); // Prevent console error
+        console.warn('Firebase IndexedDB warning (non-critical):', event.reason?.message || event.reason);
+        return;
+      }
+      // Log other unhandled rejections
+      console.error('Unhandled promise rejection:', event.reason);
+    };
 
-    return () => unsubscribe();
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    const unsubscribe = onAuthStateChanged(
+      auth, 
+      (user) => {
+        setUser(user);
+        setLoading(false);
+      },
+      (error) => {
+        // Handle auth state change errors gracefully
+        console.error('Auth state change error:', error);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
