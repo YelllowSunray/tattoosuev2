@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { TATTOO_CATEGORIES } from "@/lib/tattoo-categories";
 import { storage } from "@/lib/firebase";
@@ -67,6 +67,15 @@ export default function GeneratePage() {
   const [userCredits, setUserCredits] = useState(null);
   const [showPurchaseCredits, setShowPurchaseCredits] = useState(false);
   const [showReferenceImageInfo, setShowReferenceImageInfo] = useState(false);
+  const [showCustomerInfo, setShowCustomerInfo] = useState(false);
+  const [showModelInfo, setShowModelInfo] = useState(false);
+  const [showPlacementInfo, setShowPlacementInfo] = useState(false);
+  const [showStyleInfo, setShowStyleInfo] = useState(false);
+  const [showSizeInfo, setShowSizeInfo] = useState(false);
+  const [showColorInfo, setShowColorInfo] = useState(false);
+  const [showSkinColorInfo, setShowSkinColorInfo] = useState(false);
+  const [showSubjectInfo, setShowSubjectInfo] = useState(false);
+  const [showNumberOfImagesInfo, setShowNumberOfImagesInfo] = useState(false);
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [formWasReset, setFormWasReset] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
@@ -166,7 +175,7 @@ export default function GeneratePage() {
   };
 
   // Helper function to render label with bold/whiter styling if field is answered
-  const renderLabel = (labelText, isAnswered) => {
+  const renderLabel = (labelText, isAnswered, infoButton = null) => {
     return (
       <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
         isAnswered 
@@ -174,7 +183,23 @@ export default function GeneratePage() {
           : "text-white/60 font-normal"
       }`}>
         <span>{labelText}</span>
+        {infoButton}
       </label>
+    );
+  };
+
+  // Helper function to render info button
+  const renderInfoButton = (showInfo, setShowInfo) => {
+    return (
+      <button
+        type="button"
+        onClick={() => setShowInfo(!showInfo)}
+        className="w-4 h-4 rounded-full border border-blue-400 bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 hover:text-blue-200 hover:border-blue-300 flex items-center justify-center text-[10px] font-semibold transition-colors"
+        title="Show more information"
+        aria-label="Toggle information"
+      >
+        i
+      </button>
     );
   };
 
@@ -264,7 +289,77 @@ export default function GeneratePage() {
     fetchCustomerName();
   }, [user, selectedCustomerId, isForMe]);
 
-  // Restore form state when returning from favorite styles page
+  // Function to save form state to localStorage
+  const saveFormState = useCallback(() => {
+    try {
+      const formState = {
+        prompt,
+        selectedModel,
+        selectedCategoryId,
+        selectedStyleIds,
+        selectedPlacements,
+        customPlacement,
+        showCustomPlacement,
+        selectedColor,
+        monochromaticColor,
+        customColor,
+        showCustomColor,
+        selectedSkinColor,
+        selectedSize,
+        customSize,
+        numberOfImages,
+        selectedCustomerId,
+        isForMe,
+        referenceImages: referenceImages.map(img => ({
+          fileName: img.fileName,
+          mimeType: img.mimeType,
+          type: img.type,
+          // Don't save base64 data - too large
+        })),
+        referenceImageType,
+      };
+      localStorage.setItem("generateFormState", JSON.stringify(formState));
+    } catch (error) {
+      console.error("Error saving form state:", error);
+    }
+  }, [
+    prompt,
+    selectedModel,
+    selectedCategoryId,
+    selectedStyleIds,
+    selectedPlacements,
+    customPlacement,
+    showCustomPlacement,
+    selectedColor,
+    monochromaticColor,
+    customColor,
+    showCustomColor,
+    selectedSkinColor,
+    selectedSize,
+    customSize,
+    numberOfImages,
+    selectedCustomerId,
+    isForMe,
+    referenceImages,
+    referenceImageType,
+  ]);
+
+  // Auto-save form state whenever form fields change
+  useEffect(() => {
+    // Don't save on initial mount or if form was just reset
+    if (formWasReset) {
+      return;
+    }
+    
+    // Debounce saves to avoid too many localStorage writes
+    const timeoutId = setTimeout(() => {
+      saveFormState();
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [saveFormState, formWasReset]);
+
+  // Restore form state on page load (when navigating back from any page)
   useEffect(() => {
     const savedState = localStorage.getItem("generateFormState");
     if (savedState) {
@@ -282,8 +377,11 @@ export default function GeneratePage() {
         if (formState.customColor) setCustomColor(formState.customColor);
         if (formState.showCustomColor) setShowCustomColor(formState.showCustomColor);
         if (formState.selectedSkinColor) setSelectedSkinColor(formState.selectedSkinColor);
+        if (formState.selectedSize !== undefined) setSelectedSize(formState.selectedSize);
+        if (formState.customSize !== undefined) setCustomSize(formState.customSize);
         if (formState.numberOfImages) setNumberOfImages(formState.numberOfImages);
-        if (formState.selectedCustomerId) setSelectedCustomerId(formState.selectedCustomerId);
+        if (formState.selectedCustomerId !== undefined) setSelectedCustomerId(formState.selectedCustomerId);
+        if (formState.isForMe !== undefined) setIsForMe(formState.isForMe);
         if (formState.referenceImageType) setReferenceImageType(formState.referenceImageType);
         // Note: referenceImages base64 data is not restored (too large for localStorage)
         
@@ -323,8 +421,7 @@ export default function GeneratePage() {
           loadAndMergeFavorites();
         }
         
-        // Clear saved state after restoring
-        localStorage.removeItem("generateFormState");
+        // Don't clear saved state - keep it persistent for navigation
       } catch (e) {
         console.error("Error restoring form state:", e);
       }
@@ -1097,13 +1194,21 @@ export default function GeneratePage() {
           <form onSubmit={handleGenerate} className="space-y-6">
           {/* Customer Selection */}
           <div className="space-y-2">
-            <label className={`block text-xs uppercase tracking-[0.16em] ${
+            <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
               selectedCustomerId !== null || isForMe
                 ? "text-white font-semibold" 
                 : "text-white/60 font-normal"
             }`}>
-              Customer <span className="text-red-400">(Mandatory)</span>
+              <span>Customer <span className="text-red-400">(Mandatory)</span></span>
+              {renderInfoButton(showCustomerInfo, setShowCustomerInfo)}
             </label>
+            {showCustomerInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Select a customer from your customer list, or click &quot;For Me&quot; to generate a personal design for yourself. Customers must be created on the Customers page before they can be selected here. This helps track which designs are for which customers.
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-2">
               {isForMe ? (
                 <div className="flex-1 w-full bg-black border border-white/30 text-sm px-4 py-3 flex items-center min-h-[44px]">
@@ -1141,7 +1246,14 @@ export default function GeneratePage() {
           
           {/* Model picker */}
           <div className="space-y-2">
-            {renderLabel("Model", selectedModel !== "")}
+            {renderLabel("Model", selectedModel !== "", renderInfoButton(showModelInfo, setShowModelInfo))}
+            {showModelInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Choose the AI model that will generate your tattoo design. <strong>NanoBanana</strong> and <strong>Gemini 2.5</strong> support reference images (placement or subject photos) and offer more creative control. <strong>Imagen 4</strong> provides high-quality results but doesn't support reference images.
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {MODELS.map((m) => (
                 <button
@@ -1164,7 +1276,15 @@ export default function GeneratePage() {
           <div className="space-y-2">
             {renderLabel(
               "Placement (optional)",
-              selectedPlacements.length > 0 || (showCustomPlacement && customPlacement.trim())
+              selectedPlacements.length > 0 || (showCustomPlacement && customPlacement.trim()),
+              renderInfoButton(showPlacementInfo, setShowPlacementInfo)
+            )}
+            {showPlacementInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Select where on the body the tattoo will be placed. This helps the AI understand the context and proportions. You can choose from common placements or enter a custom body part. For more precise visualization, use a placement photo in the Reference Image section.
+                </p>
+              </div>
             )}
           <div className="flex flex-wrap gap-2">
             {PLACEMENTS.map((place) => {
@@ -1230,7 +1350,14 @@ export default function GeneratePage() {
 
           {/* Style selection with search */}
           <div className="space-y-2">
-            {renderLabel("Styles (optional)", selectedStyleIds.length > 0)}
+            {renderLabel("Styles (optional)", selectedStyleIds.length > 0, renderInfoButton(showStyleInfo, setShowStyleInfo))}
+            {showStyleInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Select one or more tattoo styles to guide the design aesthetic. You can search for specific styles or browse by category. Combining multiple styles creates unique hybrid designs. Use the "Find Favorite Styles" button to browse and select from your saved favorite tattoo images.
+                </p>
+              </div>
+            )}
             
             {/* Style Search */}
             <div className="flex gap-2">
@@ -1296,32 +1423,7 @@ export default function GeneratePage() {
                 onClick={() => {
                   // Reset formWasReset flag so favorites can be loaded when returning
                   setFormWasReset(false);
-                  // Save current form state to localStorage
-                  const formState = {
-                    prompt,
-                    selectedModel,
-                    selectedCategoryId,
-                    selectedStyleIds,
-                    selectedPlacements,
-                    customPlacement,
-                    showCustomPlacement,
-                    selectedColor,
-                    monochromaticColor,
-                    customColor,
-                    showCustomColor,
-                    selectedSkinColor,
-                    numberOfImages,
-                    selectedCustomerId,
-                    referenceImages: referenceImages.map(img => ({
-                      fileName: img.fileName,
-                      mimeType: img.mimeType,
-                      type: img.type,
-                      // Don't save base64 data - too large
-                    })),
-                    referenceImageType,
-                  };
-                  localStorage.setItem("generateFormState", JSON.stringify(formState));
-                  // Navigate to favorite styles page
+                  // Form state is already auto-saved, just navigate
                   window.location.href = "/favorite-styles";
                 }}
                 className="px-4 py-3 text-xs sm:text-sm border border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white hover:border-white/50 transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center justify-center"
@@ -1440,7 +1542,15 @@ export default function GeneratePage() {
           <div className="space-y-2">
             {renderLabel(
               "Size (optional)",
-              selectedSize !== "" && (selectedSize !== "other" || customSize.trim())
+              selectedSize !== "" && (selectedSize !== "other" || customSize.trim()),
+              renderInfoButton(showSizeInfo, setShowSizeInfo)
+            )}
+            {showSizeInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Specify the approximate size of the tattoo. This helps the AI understand scale and detail level. <strong>S:</strong> Small (5-10cm, credit card size), <strong>M:</strong> Medium (10-15cm, smartphone size), <strong>L:</strong> Large (&gt;15cm, hand size), <strong>XL:</strong> Extra Large (&gt;20cm, covers arm or leg). You can also enter custom sizes like &quot;full-sleeve&quot; or &quot;back-piece&quot;.
+                </p>
+              </div>
             )}
             <div className="flex flex-wrap gap-2">
               <button
@@ -1553,7 +1663,15 @@ export default function GeneratePage() {
           <div className="space-y-2">
             {renderLabel(
               "Color (optional)",
-              selectedColor !== "" && (selectedColor !== "custom" || customColor.trim()) && (selectedColor !== "monochromatic" || monochromaticColor.trim())
+              selectedColor !== "" && (selectedColor !== "custom" || customColor.trim()) && (selectedColor !== "monochromatic" || monochromaticColor.trim()),
+              renderInfoButton(showColorInfo, setShowColorInfo)
+            )}
+            {showColorInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Choose the color scheme for your tattoo. <strong>Black & Grey:</strong> Classic monochrome tattoos. <strong>Full Color:</strong> Vibrant, colorful designs. <strong>Natural Palette:</strong> Earthy, realistic colors. <strong>Monochromatic:</strong> Single color of your choice. <strong>Sepia/Vintage:</strong> Aged, vintage look. <strong>White Ink:</strong> Subtle white ink tattoos. <strong>Other:</strong> Specify custom color descriptions.
+                </p>
+              </div>
             )}
             <div className="flex flex-wrap gap-2">
               <button
@@ -1724,16 +1842,7 @@ export default function GeneratePage() {
             <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  {renderLabel("Reference Image (optional)", referenceImages.filter(img => img.type === referenceImageType).length > 0 && referenceImageType !== "")}
-                  <button
-                    type="button"
-                    onClick={() => setShowReferenceImageInfo(!showReferenceImageInfo)}
-                    className="w-4 h-4 rounded-full border border-white/40 text-white/60 hover:text-white hover:border-white/60 flex items-center justify-center text-[10px] transition-colors"
-                    title="Show more information"
-                    aria-label="Toggle reference image information"
-                  >
-                    i
-                  </button>
+                  {renderLabel("Reference Image (optional)", referenceImages.filter(img => img.type === referenceImageType).length > 0 && referenceImageType !== "", renderInfoButton(showReferenceImageInfo, setShowReferenceImageInfo))}
                 </div>
                 
                 {/* TLDR Version (always visible) */}
@@ -1896,7 +2005,14 @@ export default function GeneratePage() {
 
           {/* Skin Color selection */}
           <div className="space-y-2">
-            {renderLabel("Skin Color (optional)", selectedSkinColor !== "")}
+            {renderLabel("Skin Color (optional)", selectedSkinColor !== "", renderInfoButton(showSkinColorInfo, setShowSkinColorInfo))}
+            {showSkinColorInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Select the skin tone to help the AI render the tattoo with appropriate contrast and color adaptation. This ensures the design looks realistic and visible on the chosen skin tone.
+                </p>
+              </div>
+            )}
             <p className="text-[11px] text-white/50 mb-2">
               Select the skin tone for the person with the tattoo
             </p>
@@ -1943,7 +2059,15 @@ export default function GeneratePage() {
                 : "text-white/60 font-normal"
             }`}>
               SUBJECT/DESIGN ELEMENTS (e.g. wolves) <span className="text-red-400">(Mandatory)</span>
+              {renderInfoButton(showSubjectInfo, setShowSubjectInfo)}
             </label>
+            {showSubjectInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Describe the main subject or design elements you want in your tattoo. Be specific: include what you want (e.g., "howling wolf", "rose with thorns", "dragon in flight"), style hints (e.g., "mandala", "realism"), placement context, mood (e.g., "delicate", "bold", "mystical"), and any symbols or elements. The more detail you provide, the better the AI can create your vision.
+                </p>
+              </div>
+            )}
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -1960,7 +2084,14 @@ export default function GeneratePage() {
 
           {/* Number of Generated Images */}
           <div className="space-y-2">
-            {renderLabel("Number of Generated Images", numberOfImages > 0)}
+            {renderLabel("Number of Generated Images", numberOfImages > 0, renderInfoButton(showNumberOfImagesInfo, setShowNumberOfImagesInfo))}
+            {showNumberOfImagesInfo && (
+              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                <p className="text-[11px] text-white/60 leading-relaxed">
+                  Choose how many design variations you want to generate. Each image costs credits, so generating more gives you more options to choose from. You can generate 1-4 designs at a time. After generation, you can create stencils from any of the designs.
+                </p>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {[1, 2, 3, 4].map((num) => {
                 const creditsNeeded = num * CREDIT_COSTS.GENERATE_DESIGN;
