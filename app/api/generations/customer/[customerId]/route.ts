@@ -9,7 +9,18 @@ export async function GET(
   try {
     const userId = await requireAuth(req);
     const { customerId } = await params;
-    const generations = await getGenerationsByCustomer(customerId, userId);
+    
+    // Handle "personal" designs specially - don't require a customer record
+    let generations;
+    if (customerId === "personal") {
+      const { getAllGenerations } = await import("@/lib/crm-utils");
+      const allGenerations = await getAllGenerations();
+      generations = allGenerations.filter(
+        (g) => g.userId === userId && g.customerId === "personal"
+      );
+    } else {
+      generations = await getGenerationsByCustomer(customerId, userId);
+    }
 
     return NextResponse.json({
       success: true,

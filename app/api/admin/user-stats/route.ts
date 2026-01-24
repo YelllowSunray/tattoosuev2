@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       customerCountsByUser.set(createdBy, (customerCountsByUser.get(createdBy) || 0) + 1);
     });
 
-    // Fetch user emails from Firebase Auth
+    // Fetch user emails from Firebase Auth and credits from Firestore
     const auth = getAdminAuth();
     const userDataWithEmails = await Promise.all(
       Array.from(userDataMap.values()).map(async (userData) => {
@@ -107,6 +107,18 @@ export async function GET(req: NextRequest) {
         } catch (error: any) {
           console.error(`[User Stats] Error fetching user ${userData.userId}:`, error?.code || error?.message);
           userData.email = `User Not Found (${userData.userId.substring(0, 8)}...)`;
+        }
+
+        // Fetch credits data from users collection
+        let totalCreditsBought = 0;
+        try {
+          const userCreditsDoc = await db.collection("users").doc(userData.userId).get();
+          if (userCreditsDoc.exists) {
+            const creditsData = userCreditsDoc.data();
+            totalCreditsBought = creditsData?.totalPurchased || 0;
+          }
+        } catch (error) {
+          console.error(`[User Stats] Error fetching credits for user ${userData.userId}:`, error);
         }
 
         // Convert monthly stats Map to array format
@@ -130,6 +142,7 @@ export async function GET(req: NextRequest) {
           totalImages: userData.totalImages,
           totalGenerations: userData.totalGenerations,
           totalCustomers: totalCustomers,
+          totalCreditsBought: totalCreditsBought,
           monthlyStats: monthlyStatsArray.sort((a, b) => {
             // Sort by year desc, then month desc
             if (a.year !== b.year) return b.year - a.year;

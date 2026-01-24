@@ -34,6 +34,7 @@ interface UserStat {
   totalGenerations: number;
   totalImages: number;
   totalCustomers: number;
+  totalCreditsBought: number;
   monthlyStats: MonthlyStat[];
 }
 
@@ -513,7 +514,7 @@ export default function AdminPage() {
                               Email
                             </th>
                             <th className="pb-3 text-xs text-white/60 uppercase tracking-[0.16em] font-normal">
-                              Generations
+                              Credits Bought
                             </th>
                             <th className="pb-3 text-xs text-white/60 uppercase tracking-[0.16em] font-normal">
                               Images Generated
@@ -538,7 +539,7 @@ export default function AdminPage() {
                                 </button>
                               </td>
                             <td className="py-3 text-sm text-white/70">
-                              {stat.totalGenerations}
+                              {stat.totalCreditsBought || 0}
                             </td>
                             <td className="py-3 text-sm text-white/70">
                               {stat.totalImages}

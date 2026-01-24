@@ -10,6 +10,7 @@ import AuthButton from "../components/AuthButton";
 import CustomerSelector from "../components/CustomerSelector";
 import CreditsDisplay from "../components/CreditsDisplay";
 import PurchaseCredits from "../components/PurchaseCredits";
+import MobileNav from "../components/MobileNav";
 import { CREDIT_COSTS } from "@/lib/credit-config";
 
 const PLACEMENTS = [
@@ -55,8 +56,11 @@ export default function GeneratePage() {
   const [customColor, setCustomColor] = useState("");
   const [showCustomColor, setShowCustomColor] = useState(false);
   const [selectedSkinColor, setSelectedSkinColor] = useState("");
-  const [numberOfImages, setNumberOfImages] = useState(4);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [customSize, setCustomSize] = useState("");
+  const [numberOfImages, setNumberOfImages] = useState(2);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [isForMe, setIsForMe] = useState(false);
   const [isGeneratingStencils, setIsGeneratingStencils] = useState(false);
   const [stencils, setStencils] = useState(null);
   const [userCredits, setUserCredits] = useState(null);
@@ -134,6 +138,19 @@ export default function GeneratePage() {
     }
     setStyleSearchQuery("");
     setShowStyleSearchResults(false);
+  };
+
+  // Helper function to render label with bold/whiter styling if field is answered
+  const renderLabel = (labelText, isAnswered) => {
+    return (
+      <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
+        isAnswered 
+          ? "text-white font-semibold" 
+          : "text-white/60 font-normal"
+      }`}>
+        <span>{labelText}</span>
+      </label>
+    );
   };
 
   // Close dropdown when clicking outside
@@ -361,9 +378,9 @@ export default function GeneratePage() {
       return;
     }
     
-    // Require customer selection
-    if (!selectedCustomerId) {
-      setResultText("Please select a customer before generating.");
+    // Require customer selection or "For Me" mode
+    if (!selectedCustomerId && !isForMe) {
+      setResultText("Please select a customer or click 'For Me' before generating.");
       return;
     }
 
@@ -438,6 +455,19 @@ export default function GeneratePage() {
           "very-dark": "very dark skin tone",
         };
         extraParts.push(`skin color: ${skinColorLabels[selectedSkinColor] || selectedSkinColor}`);
+      }
+
+      // Add size selection
+      if (selectedSize === "other" && customSize.trim()) {
+        extraParts.push(`size: ${customSize.trim()}`);
+      } else if (selectedSize === "S") {
+        extraParts.push("size: 5-10cm, like a credit card");
+      } else if (selectedSize === "M") {
+        extraParts.push("size: 10-15cm, like a smartphone");
+      } else if (selectedSize === "L") {
+        extraParts.push("size: > 15cm, like a hand");
+      } else if (selectedSize === "XL") {
+        extraParts.push("size: > 20cm, covers arm or leg");
       }
 
       if (extraParts.length > 0) {
@@ -558,7 +588,7 @@ export default function GeneratePage() {
             // Don't store full base64 referenceImages data - it's too large and causes stack overflow
             // Only store metadata (file names, types) if needed for reference
             const generationData = {
-              customerId: selectedCustomerId,
+              customerId: isForMe ? "personal" : selectedCustomerId,
               userId: user.uid,
               prompt: prompt.trim(),
               fullPrompt: fullPrompt,
@@ -885,8 +915,11 @@ export default function GeneratePage() {
     setCustomColor("");
     setShowCustomColor(false);
     setSelectedSkinColor("");
-    setNumberOfImages(4);
+    setSelectedSize("");
+    setCustomSize("");
+    setNumberOfImages(2);
     setSelectedCustomerId(null);
+    setIsForMe(false);
     setImages(null);
     setStencils(null);
     setResultText("");
@@ -920,32 +953,51 @@ export default function GeneratePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-3xl border border-white/10 bg-black/70 p-6 sm:p-8 space-y-6">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
+      <div className="w-full max-w-3xl border border-white/10 bg-black/70 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
         <div className="space-y-4">
-          <div className="flex items-center justify-end gap-2 flex-wrap">
-            <Link
-              href="/"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-            >
-              ← Back to gallery
-            </Link>
-            <Link
-              href="/customers"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-            >
-              Customers
-            </Link>
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="hidden sm:flex items-center gap-2 flex-wrap">
+              <Link
+                href="/"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+              >
+                ← Back to gallery
+              </Link>
+              <Link
+                href="/history"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+              >
+                History
+              </Link>
+              <Link
+                href="/customers"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+              >
+                Customers
+              </Link>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
               <CreditsDisplay />
               <Link
                 href="/credits"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
               >
                 Credits
               </Link>
             </div>
-            <AuthButton />
+            <div className="sm:hidden flex items-center justify-between w-full">
+              <MobileNav />
+              <div className="flex items-center gap-2">
+                <CreditsDisplay />
+                <Link
+                  href="/credits"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                >
+                  Credits
+                </Link>
+              </div>
+            </div>
           </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-4">
@@ -989,23 +1041,59 @@ export default function GeneratePage() {
           ) : (
           <form onSubmit={handleGenerate} className="space-y-6">
           {/* Customer Selection */}
-          <CustomerSelector
-            selectedCustomerId={selectedCustomerId}
-            onSelectCustomer={setSelectedCustomerId}
-          />
+          <div className="space-y-2">
+            <label className={`block text-xs uppercase tracking-[0.16em] ${
+              selectedCustomerId !== null || isForMe
+                ? "text-white font-semibold" 
+                : "text-white/60 font-normal"
+            }`}>
+              Customer <span className="text-red-400">*</span>
+            </label>
+            <div className="flex items-center gap-2">
+              {isForMe ? (
+                <div className="flex-1 w-full bg-black border border-white/30 text-sm px-4 py-3 flex items-center min-h-[44px]">
+                  <span className="text-white/70">A personal design generation for you.</span>
+                </div>
+              ) : (
+                <div className="flex-1">
+                  <CustomerSelector
+                    selectedCustomerId={selectedCustomerId}
+                    onSelectCustomer={setSelectedCustomerId}
+                    hideLabel={true}
+                  />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isForMe) {
+                    setIsForMe(false);
+                  } else {
+                    setIsForMe(true);
+                    setSelectedCustomerId(null);
+                  }
+                }}
+                className={`px-4 py-3 text-xs sm:text-sm border transition-colors min-h-[44px] flex items-center justify-center whitespace-nowrap ${
+                  isForMe
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                For Me
+              </button>
+            </div>
+          </div>
           
           {/* Model picker */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Model
-            </label>
+            {renderLabel("Model", selectedModel !== "")}
             <div className="flex flex-wrap gap-2">
               {MODELS.map((m) => (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => setSelectedModel(m.id)}
-                  className={`px-3 py-1.5 text-xs sm:text-sm border transition-colors ${
+                  className={`px-4 py-3 text-xs sm:text-sm border transition-colors min-h-[44px] flex items-center justify-center ${
                     selectedModel === m.id
                       ? "bg-white text-black border-white"
                       : "bg-transparent text-white/70 border-white/30 hover:border-white/60"
@@ -1019,9 +1107,10 @@ export default function GeneratePage() {
           
           {/* Placement selection */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Placement (optional)
-            </label>
+            {renderLabel(
+              "Placement (optional)",
+              selectedPlacements.length > 0 || (showCustomPlacement && customPlacement.trim())
+            )}
           <div className="flex flex-wrap gap-2">
             {PLACEMENTS.map((place) => {
               const active = selectedPlacements.includes(place);
@@ -1041,7 +1130,7 @@ export default function GeneratePage() {
                       setCustomPlacement("");
                     }
                   }}
-                  className={`px-3 py-1.5 text-xs border transition-colors capitalize ${
+                  className={`px-4 py-3 text-xs border transition-colors capitalize min-h-[44px] flex items-center justify-center ${
                     active
                       ? "bg-white text-black border-white"
                       : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1062,7 +1151,7 @@ export default function GeneratePage() {
                   setSelectedPlacements([]);
                 }
               }}
-              className={`px-3 py-1.5 text-xs border transition-colors ${
+              className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                 showCustomPlacement
                   ? "bg-white text-black border-white"
                   : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1078,7 +1167,7 @@ export default function GeneratePage() {
                 value={customPlacement}
                 onChange={(e) => setCustomPlacement(e.target.value)}
                 placeholder="Enter body part (e.g., wrist, ankle, thigh)"
-                className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
               />
             </div>
           )}
@@ -1086,9 +1175,7 @@ export default function GeneratePage() {
 
           {/* Style selection with search */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Style (optional)
-            </label>
+            {renderLabel("Styles (optional)", selectedStyleIds.length > 0)}
             
             {/* Style Search */}
             <div className="flex gap-2">
@@ -1105,7 +1192,7 @@ export default function GeneratePage() {
                       setShowStyleSearchResults(true);
                     }
                   }}
-                  placeholder="Search styles (e.g., 'realism', 'mandala', 'minimalist')"
+                  placeholder="Search and combine styles (e.g., 'realism', 'mandala', 'minimalist')"
                   className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
                 />
               
@@ -1182,7 +1269,7 @@ export default function GeneratePage() {
                   // Navigate to favorite styles page
                   window.location.href = "/favorite-styles";
                 }}
-                className="px-3 py-2 text-xs sm:text-sm border border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white hover:border-white/50 transition-colors whitespace-nowrap shrink-0"
+                className="px-4 py-3 text-xs sm:text-sm border border-white/30 bg-white/5 text-white hover:bg-white/10 hover:text-white hover:border-white/50 transition-colors whitespace-nowrap shrink-0 min-h-[44px] flex items-center justify-center"
               >
                 Find Favorite Styles
               </button>
@@ -1202,7 +1289,7 @@ export default function GeneratePage() {
                     setSelectedCategoryId(id);
                     setCurrentStyleId("");
                   }}
-                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
+                  className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white min-h-[44px]"
                 >
                   <option value="">All categories</option>
                   {TATTOO_CATEGORIES.map((cat) => (
@@ -1216,8 +1303,8 @@ export default function GeneratePage() {
                   <select
                     value={currentStyleId}
                     onChange={(e) => setCurrentStyleId(e.target.value)}
-                    className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white"
-                    disabled={!selectedCategoryId}
+                  className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white min-h-[44px]"
+                  disabled={!selectedCategoryId}
                   >
                     <option value="">
                       {selectedCategoryId
@@ -1294,11 +1381,125 @@ export default function GeneratePage() {
             )}
           </div>
 
+          {/* Size selection */}
+          <div className="space-y-2">
+            {renderLabel(
+              "Size (optional)",
+              selectedSize !== "" && (selectedSize !== "other" || customSize.trim())
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSize === "S") {
+                    setSelectedSize("");
+                    setCustomSize("");
+                  } else {
+                    setSelectedSize("S");
+                    setCustomSize("");
+                  }
+                }}
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                  selectedSize === "S"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                S: 5-10cm, like a credit card
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSize === "M") {
+                    setSelectedSize("");
+                    setCustomSize("");
+                  } else {
+                    setSelectedSize("M");
+                    setCustomSize("");
+                  }
+                }}
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                  selectedSize === "M"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                M: 10-15cm, like a smartphone
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSize === "L") {
+                    setSelectedSize("");
+                    setCustomSize("");
+                  } else {
+                    setSelectedSize("L");
+                    setCustomSize("");
+                  }
+                }}
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                  selectedSize === "L"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                L: &gt; 15cm, like a hand
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSize === "XL") {
+                    setSelectedSize("");
+                    setCustomSize("");
+                  } else {
+                    setSelectedSize("XL");
+                    setCustomSize("");
+                  }
+                }}
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                  selectedSize === "XL"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                XL: &gt; 20cm, covers arm or leg
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedSize === "other") {
+                    setSelectedSize("");
+                    setCustomSize("");
+                  } else {
+                    setSelectedSize("other");
+                  }
+                }}
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                  selectedSize === "other"
+                    ? "bg-white text-black border-white"
+                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                }`}
+              >
+                Other
+              </button>
+            </div>
+            {selectedSize === "other" && (
+              <input
+                type="text"
+                value={customSize}
+                onChange={(e) => setCustomSize(e.target.value)}
+                placeholder="full-sleeve, leg-sleeve, back-piece"
+                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
+              />
+            )}
+          </div>
+
           {/* Color selection */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Color (optional)
-            </label>
+            {renderLabel(
+              "Color (optional)",
+              selectedColor !== "" && (selectedColor !== "custom" || customColor.trim()) && (selectedColor !== "monochromatic" || monochromaticColor.trim())
+            )}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1311,11 +1512,11 @@ export default function GeneratePage() {
                     setCustomColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
-                  selectedColor === "black-grey"
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
-                }`}
+                  className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
+                    selectedColor === "black-grey"
+                      ? "bg-white text-black border-white"
+                      : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
+                  }`}
               >
                 Black & Grey
               </button>
@@ -1330,7 +1531,7 @@ export default function GeneratePage() {
                     setCustomColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "full-color"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1349,7 +1550,7 @@ export default function GeneratePage() {
                     setCustomColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "natural-palette"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1369,7 +1570,7 @@ export default function GeneratePage() {
                     setCustomColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "monochromatic"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1389,7 +1590,7 @@ export default function GeneratePage() {
                     setMonochromaticColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "sepia-vintage"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1409,7 +1610,7 @@ export default function GeneratePage() {
                     setMonochromaticColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "white-ink"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1430,7 +1631,7 @@ export default function GeneratePage() {
                     setMonochromaticColor("");
                   }
                 }}
-                className={`px-3 py-1.5 text-xs border transition-colors ${
+                className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                   selectedColor === "custom"
                     ? "bg-white text-black border-white"
                     : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1446,7 +1647,7 @@ export default function GeneratePage() {
                   value={monochromaticColor}
                   onChange={(e) => setMonochromaticColor(e.target.value)}
                   placeholder="Enter color (e.g., red, blue, green)"
-                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+                  className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
                 />
               </div>
             )}
@@ -1457,7 +1658,7 @@ export default function GeneratePage() {
                   value={customColor}
                   onChange={(e) => setCustomColor(e.target.value)}
                   placeholder="Custom color (e.g., Golden Accents)"
-                  className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
+                  className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
                 />
               </div>
             )}
@@ -1468,9 +1669,7 @@ export default function GeneratePage() {
             <div className="space-y-3">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-                    Reference Image (optional)
-                  </label>
+                  {renderLabel("Reference Image (optional)", referenceImages.length > 0)}
                   <button
                     type="button"
                     onClick={() => setShowReferenceImageInfo(!showReferenceImageInfo)}
@@ -1524,7 +1723,7 @@ export default function GeneratePage() {
                       setReferenceImages([]);
                       setReferenceImageType("placement");
                     }}
-                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                    className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                       referenceImageType === "placement"
                         ? "bg-white text-black border-white"
                         : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1540,7 +1739,7 @@ export default function GeneratePage() {
                       setReferenceImages([]);
                       setReferenceImageType("subject");
                     }}
-                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                    className={`px-4 py-3 text-xs border transition-colors min-h-[44px] flex items-center justify-center ${
                       referenceImageType === "subject"
                         ? "bg-white text-black border-white"
                         : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1626,9 +1825,7 @@ export default function GeneratePage() {
 
           {/* Skin Color selection */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Skin Color (optional)
-            </label>
+            {renderLabel("Skin Color (optional)", selectedSkinColor !== "")}
             <p className="text-[11px] text-white/50 mb-2">
               Select the skin tone for the person with the tattoo
             </p>
@@ -1669,15 +1866,19 @@ export default function GeneratePage() {
 
           {/* Prompt */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Prompt
+            <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
+              prompt.trim().length > 0
+                ? "text-white font-semibold" 
+                : "text-white/60 font-normal"
+            }`}>
+              Prompt <span className="text-red-400">*</span>
             </label>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
               placeholder="Example: Glorious Phoenix, Rose with thorns, Dragon in flight, Howling wolf, Japanese koi fish"
-              className="w-full px-3 py-2 text-sm bg-black border border-white/20 text-white outline-none focus:border-white resize-none"
+              className="w-full px-4 py-3 text-sm sm:text-base bg-black border border-white/20 text-white outline-none focus:border-white resize-none min-h-[120px]"
             />
             <p className="text-[11px] text-white/40">
               Tip: include style (e.g. mandala, color realism), placement
@@ -1688,9 +1889,7 @@ export default function GeneratePage() {
 
           {/* Number of Generated Images */}
           <div className="space-y-2">
-            <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-              Number of Generated Images
-            </label>
+            {renderLabel("Number of Generated Images", numberOfImages > 0)}
             <div className="flex flex-wrap gap-2">
               {[1, 2, 3, 4].map((num) => {
                 const creditsNeeded = num * CREDIT_COSTS.GENERATE_DESIGN;
@@ -1699,7 +1898,7 @@ export default function GeneratePage() {
                     key={num}
                     type="button"
                     onClick={() => setNumberOfImages(num)}
-                    className={`px-3 py-1.5 text-xs border transition-colors ${
+                    className={`px-4 py-3 text-xs border transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center ${
                       numberOfImages === num
                         ? "bg-white text-black border-white"
                         : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
@@ -1715,15 +1914,67 @@ export default function GeneratePage() {
             </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={isGenerating || !prompt.trim() || !selectedCustomerId}
-            className="w-full sm:w-auto px-5 py-2 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed"
-          >
-            {isGenerating 
-              ? `Generating ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}...` 
-              : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${numberOfImages * CREDIT_COSTS.GENERATE_DESIGN} credit${numberOfImages * CREDIT_COSTS.GENERATE_DESIGN > 1 ? "s" : ""}`}
-          </button>
+          {(() => {
+            const requiredCredits = numberOfImages * CREDIT_COSTS.GENERATE_DESIGN;
+            const hasEnoughCredits = userCredits !== null && userCredits >= requiredCredits;
+            const insufficientCredits = userCredits !== null && userCredits < requiredCredits;
+            const missingCustomer = !selectedCustomerId && !isForMe;
+            const missingPrompt = !prompt.trim();
+            const showCustomerHelp = hasEnoughCredits && missingCustomer;
+            const showPromptHelp = missingPrompt && !missingCustomer && hasEnoughCredits;
+            const isButtonEnabled = !isGenerating && !missingPrompt && !missingCustomer && !insufficientCredits;
+            
+            return (
+              <div className="space-y-2">
+                <button
+                  type="submit"
+                  disabled={isGenerating || missingPrompt || missingCustomer || insufficientCredits}
+                  className={`w-full sm:w-auto px-6 py-3 text-sm font-medium min-h-[44px] ${
+                    insufficientCredits || (missingCustomer && hasEnoughCredits) || (missingPrompt && !missingCustomer && hasEnoughCredits)
+                      ? "bg-red-600 text-white border border-red-500 cursor-not-allowed"
+                      : isButtonEnabled
+                        ? "text-black bg-white border border-white/20 hover:bg-white/90 cursor-pointer"
+                        : "text-black/40 bg-white/30 border border-white/20 cursor-not-allowed"
+                  }`}
+                >
+                  {isGenerating 
+                    ? `Generating ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}...` 
+                    : insufficientCredits
+                      ? "Not enough Credits to Generate Tattoo"
+                      : missingCustomer && hasEnoughCredits
+                        ? "Fill in Customer Field"
+                        : missingPrompt && !missingCustomer && hasEnoughCredits
+                          ? "Fill in Prompt Field"
+                          : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${requiredCredits} credit${requiredCredits > 1 ? "s" : ""}`}
+                </button>
+                {showCustomerHelp && (
+                  <p className="text-xs text-white/60 max-w-md">
+                    Either create a customer on the{" "}
+                    <Link href="/customers" className="text-white/80 hover:text-white underline">
+                      customer page
+                    </Link>
+                    , and fill them in the customer field, or on the right of the customer field click{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForMe(true);
+                        setSelectedCustomerId(null);
+                      }}
+                      className="text-white/80 hover:text-white underline font-medium"
+                    >
+                      "For Me"
+                    </button>
+                    {" "}for personal designs for you.
+                  </p>
+                )}
+                {showPromptHelp && (
+                  <p className="text-xs text-white/60 max-w-md">
+                    The Prompt field is mandatory, please fill something in like a &quot;howling wolf&quot; or &quot;a beautiful giraffe&quot;.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
         </form>
           )
         ) : (
@@ -1747,7 +1998,7 @@ export default function GeneratePage() {
                     type="button"
                     onClick={handleGenerateStencils}
                     disabled={isGeneratingStencils}
-                    className="px-4 py-2 text-sm font-medium text-white bg-white/10 border border-white/30 hover:bg-white/20 disabled:bg-white/5 disabled:text-white/40 disabled:cursor-not-allowed transition-colors"
+                    className="px-5 py-3 text-sm font-medium text-white bg-white/10 border border-white/30 hover:bg-white/20 disabled:bg-white/5 disabled:text-white/40 disabled:cursor-not-allowed transition-colors min-h-[44px]"
                   >
                     {isGeneratingStencils 
                       ? `Generating ${images.length} stencil${images.length > 1 ? "s" : ""}...` 

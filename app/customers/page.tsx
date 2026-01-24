@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
 import CreditsDisplay from "../components/CreditsDisplay";
+import MobileNav from "../components/MobileNav";
 
 interface Customer {
   id: string;
@@ -87,11 +88,11 @@ function CustomerModal({ isOpen, onClose, onSuccess, userId }: CustomerModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto py-4">
-      <div className="relative w-full max-w-md mx-4 my-auto bg-black border border-white/20 p-6 sm:p-8">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto p-4">
+      <div className="relative w-full max-w-md mx-auto my-auto bg-black border border-white/20 p-4 sm:p-6 lg:p-8">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-white/60 hover:text-white text-2xl leading-none"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/60 hover:text-white text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Close"
         >
           ×
@@ -123,7 +124,7 @@ function CustomerModal({ isOpen, onClose, onSuccess, userId }: CustomerModalProp
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white"
+                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white min-h-[44px]"
                 placeholder="Customer name"
               />
             </div>
@@ -173,14 +174,14 @@ function CustomerModal({ isOpen, onClose, onSuccess, userId }: CustomerModalProp
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 text-sm font-medium text-white border border-white/30 hover:bg-white/10"
+                className="flex-1 px-4 py-3 text-sm font-medium text-white border border-white/30 hover:bg-white/10 min-h-[44px]"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-3 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed min-h-[44px]"
               >
                 {loading ? "Creating..." : "Create Customer"}
               </button>
@@ -192,8 +193,17 @@ function CustomerModal({ isOpen, onClose, onSuccess, userId }: CustomerModalProp
   );
 }
 
+interface PersonalDesign {
+  id: string;
+  createdAt: string;
+  images: string[];
+  prompt: string;
+  model: string;
+}
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [personalDesigns, setPersonalDesigns] = useState<PersonalDesign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -252,6 +262,23 @@ export default function CustomersPage() {
       );
 
       setCustomers(customersWithCounts);
+
+      // Load personal designs (generations with customerId === "personal")
+      try {
+        const token = await user.getIdToken();
+        const personalRes = await fetch(`/api/generations/customer/personal`, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+        if (personalRes.ok) {
+          const personalData = await personalRes.json();
+          setPersonalDesigns(personalData.generations || []);
+        }
+      } catch (err) {
+        console.error("Failed to load personal designs:", err);
+        // Don't set error for personal designs - it's optional
+      }
     } catch (err) {
       console.error("Failed to load customers:", err);
       setError(err instanceof Error ? err.message : "Failed to load customers");
@@ -299,36 +326,49 @@ export default function CustomersPage() {
   return (
     <div className="min-h-screen bg-black text-white px-4 py-10">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
-              CRM - Customers
-            </h1>
-            <p className="text-xs sm:text-sm text-white/60">
-              Manage your customers and view their generated tattoo designs
-            </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2 sm:block">
+            <div className="sm:hidden">
+              <MobileNav />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight">
+                CRM - Customers
+              </h1>
+              <p className="text-xs sm:text-sm text-white/60 hidden sm:block">
+                Manage your customers and view their generated tattoo designs
+              </p>
+            </div>
           </div>
-          <div className="flex gap-2 items-center">
-            <button
-              onClick={() => setShowModal(true)}
-              className="text-xs sm:text-sm text-black bg-white border border-white/30 px-3 py-1.5 rounded-full hover:bg-zinc-200 transition-colors"
-            >
-              + Add Customer
-            </button>
+          <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
             <Link
               href="/"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
             >
               ← Gallery
             </Link>
-            <CreditsDisplay />
-            <Link
-              href="/credits"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+            <button
+              onClick={() => setShowModal(true)}
+              className="text-xs sm:text-sm text-black bg-white border border-white/30 px-4 py-3 rounded-full hover:bg-zinc-200 transition-colors min-h-[44px] flex items-center justify-center"
             >
-              Credits
-            </Link>
-            <AuthButton />
+              + Add Customer
+            </button>
+            <div className="hidden lg:flex gap-2 items-center">
+              <Link
+                href="/generate"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+              >
+                Generate
+              </Link>
+              <CreditsDisplay />
+              <Link
+                href="/credits"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+              >
+                Credits
+              </Link>
+              <AuthButton />
+            </div>
           </div>
         </div>
 
@@ -338,16 +378,62 @@ export default function CustomersPage() {
           </div>
         )}
 
-        {/* Search Bar */}
+        {/* Personal Designs Section */}
+        {personalDesigns.length > 0 && (() => {
+          // Calculate total designs across all personal generations
+          const totalDesigns = personalDesigns.reduce((total, design) => {
+            return total + (design.images?.length || 0);
+          }, 0);
+          
+          // Get the most recent creation date
+          const mostRecentDate = personalDesigns.length > 0 
+            ? new Date(Math.max(...personalDesigns.map(d => new Date(d.createdAt).getTime())))
+            : null;
+          
+          return (
+            <div className="mb-8">
+              <h2 className="text-xl font-light mb-4">Personal Designs</h2>
+              <Link
+                href={`/customers/personal`}
+                className="block border border-white/10 bg-black/70 p-4 hover:bg-black/90 transition-colors max-w-md"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="text-lg font-medium text-white flex-1">
+                      Personal Design
+                    </h3>
+                    <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
+                      {totalDesigns} {totalDesigns === 1 ? "design" : "designs"}
+                    </span>
+                  </div>
+                  <div className="text-xs text-white/60">
+                    <div>A personal design generation for you.</div>
+                  </div>
+                  {mostRecentDate && (
+                    <div className="text-xs text-white/50 pt-2 border-t border-white/10">
+                      Last updated {mostRecentDate.toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            </div>
+          );
+        })()}
+
+        {/* Customer Designs Section */}
         {customers.length > 0 && (
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search customers by name, email, or phone..."
-              className="w-full bg-black border border-white/30 text-sm px-4 py-2 outline-none focus:border-white text-white placeholder:text-white/40"
-            />
+          <div className="mb-8">
+            <h2 className="text-xl font-light mb-4">Customer Designs</h2>
+            {/* Search Bar */}
+            <div className="space-y-2 mb-4">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search customers by name, email, or phone..."
+                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
+              />
+            </div>
           </div>
         )}
 
@@ -371,7 +457,7 @@ export default function CustomersPage() {
                 </p>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="text-xs sm:text-sm text-black bg-white border border-white/30 px-4 py-2 rounded-full hover:bg-zinc-200"
+                  className="text-xs sm:text-sm text-black bg-white border border-white/30 px-5 py-3 rounded-full hover:bg-zinc-200 min-h-[44px] flex items-center justify-center"
                 >
                   + Add Customer
                 </button>
@@ -387,7 +473,7 @@ export default function CustomersPage() {
                 </p>
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-4 py-2 rounded-full"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-5 py-3 rounded-full min-h-[44px] flex items-center justify-center"
                 >
                   Clear search
                 </button>

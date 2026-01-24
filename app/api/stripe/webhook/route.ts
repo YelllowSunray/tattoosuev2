@@ -25,7 +25,11 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
   
   try {
+    const url = req.url;
+    const host = req.headers.get("host");
     console.log("🔔 Webhook received at", new Date().toISOString());
+    console.log("🌐 Request URL:", url);
+    console.log("🌐 Host header:", host);
     
     if (!process.env.STRIPE_SECRET_KEY || !webhookSecret) {
       console.error("❌ Stripe configuration missing");

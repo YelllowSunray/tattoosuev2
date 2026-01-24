@@ -182,7 +182,7 @@ function FavoriteStylesContent() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
+      <header className="relative border-b border-white/5 bg-black/95 lg:bg-black/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
           <div className="flex-1 flex justify-start gap-2">
             <Link
@@ -203,7 +203,7 @@ function FavoriteStylesContent() {
             </p>
           </div>
           <div className="flex-1 flex justify-end">
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <CreditsDisplay />
               <Link
                 href="/credits"
@@ -256,20 +256,13 @@ function FavoriteStylesContent() {
             </div>
           ) : (
             <>
-              {/* Instruction */}
-              <div className="mb-6 p-4 border border-white/20 bg-black/60">
-                <p className="text-sm text-white/80">
-                  Select your favorite styles (a mix of styles often creates the most beautiful tattoos)
-                </p>
-              </div>
-
-              {/* Selected Favorites Display */}
-              {favoriteStyleIds.length > 0 && (
-                <div className="mb-6 p-4 border border-white/20 bg-black/60">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-white/80">
-                      Selected: {favoriteStyleIds.length} / 5
-                    </p>
+              {/* Selected Favorites Display - Sticky Header */}
+              <div className="sticky top-0 z-40 mb-6 p-4 border border-white/20 bg-black/90 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm text-white/80">
+                    {favoriteStyleIds.length} / 5 styles selected
+                  </p>
+                  {favoriteStyleIds.length > 0 && (
                     <button
                       onClick={async () => {
                         setFavoriteStyleIds([]);
@@ -294,7 +287,9 @@ function FavoriteStylesContent() {
                     >
                       Clear All
                     </button>
-                  </div>
+                  )}
+                </div>
+                {favoriteStyleIds.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {favoriteStyleIds.map((styleId) => {
                       const styleInfo = getStyleById(styleId);
@@ -318,8 +313,15 @@ function FavoriteStylesContent() {
                       );
                     })}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* Instruction */}
+              <div className="mb-6 p-4 border border-white/20 bg-black/60">
+                <p className="text-sm text-white/80">
+                  Select your favorite styles (a mix of styles often creates the most beautiful tattoos)
+                </p>
+              </div>
 
               {/* Results Count */}
               <div className="mb-6 flex items-center justify-between">

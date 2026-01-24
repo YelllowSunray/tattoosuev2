@@ -14,12 +14,14 @@ interface CustomerSelectorProps {
   selectedCustomerId: string | null;
   onSelectCustomer: (customerId: string | null) => void;
   onCreateNew?: () => void;
+  hideLabel?: boolean;
 }
 
 export default function CustomerSelector({
   selectedCustomerId,
   onSelectCustomer,
   onCreateNew,
+  hideLabel = false,
 }: CustomerSelectorProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -92,9 +94,15 @@ export default function CustomerSelector({
 
   return (
     <div className="space-y-2">
-      <label className="block text-xs text-white/60 uppercase tracking-[0.16em]">
-        Customer <span className="text-red-400">*</span>
-      </label>
+      {!hideLabel && (
+        <label className={`block text-xs uppercase tracking-[0.16em] ${
+          selectedCustomerId 
+            ? "text-white font-semibold" 
+            : "text-white/60 font-normal"
+        }`}>
+          Customer <span className="text-red-400">*</span>
+        </label>
+      )}
       
       <div className="relative" ref={selectorRef}>
         {/* Selected Customer Display */}
@@ -129,7 +137,13 @@ export default function CustomerSelector({
                 setShowResults(true);
               }
             }}
-            placeholder={selectedCustomer ? "Search for another customer..." : "Search customers by name, email, or phone..."}
+            placeholder={
+              selectedCustomer 
+                ? "Search for another customer..." 
+                : customers.length === 0 
+                  ? "First create a customer on the customer page OR click \"For Me\" for personal design for you"
+                  : "Search customers by name, email, or phone..."
+            }
             className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white"
           />
         )}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../../components/AuthButton";
 import CreditsDisplay from "../../components/CreditsDisplay";
+import MobileNav from "../../components/MobileNav";
 import { storage } from "@/lib/firebase";
 import { ref, getDownloadURL, uploadString } from "firebase/storage";
 import { CREDIT_COSTS } from "@/lib/credit-config";
@@ -141,28 +142,46 @@ export default function CustomerDetailPage() {
         // Get Firebase Auth token
         const token = await user.getIdToken();
         
-        // Load customer
-        const customerRes = await fetch(`/api/customers/${customerId}`, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-          },
-        });
-        if (!customerRes.ok) {
-          if (customerRes.status === 404) {
-            setError("Customer not found");
-          } else {
-            const errorData = await customerRes.json();
-            setError(errorData.error || "Failed to load customer");
+        // Handle "personal" designs specially - skip customer loading
+        if (customerId === "personal") {
+          // Set a dummy customer object for personal designs
+          setCustomer({
+            id: "personal",
+            name: "Personal Designs",
+            email: user.email || "",
+            phone: undefined,
+            notes: "A personal design generation for you.",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: user.uid,
+          });
+          setEditName("Personal Designs");
+          setEditEmail(user.email || "");
+          setEditPhone("");
+        } else {
+          // Load customer
+          const customerRes = await fetch(`/api/customers/${customerId}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          });
+          if (!customerRes.ok) {
+            if (customerRes.status === 404) {
+              setError("Customer not found");
+            } else {
+              const errorData = await customerRes.json();
+              setError(errorData.error || "Failed to load customer");
+            }
+            return;
           }
-          return;
+          const customerData = await customerRes.json();
+          const customerInfo = customerData.customer;
+          setCustomer(customerInfo);
+          // Initialize edit values
+          setEditName(customerInfo.name);
+          setEditEmail(customerInfo.email);
+          setEditPhone(customerInfo.phone || "");
         }
-        const customerData = await customerRes.json();
-        const customerInfo = customerData.customer;
-        setCustomer(customerInfo);
-        // Initialize edit values
-        setEditName(customerInfo.name);
-        setEditEmail(customerInfo.email);
-        setEditPhone(customerInfo.phone || "");
         
         // Load generations
         const generationsRes = await fetch(`/api/generations/customer/${customerId}`, {
@@ -477,36 +496,41 @@ export default function CustomerDetailPage() {
   return (
     <div className="min-h-screen bg-black text-white px-4 py-10">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-light tracking-tight">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight">
               {customer.name}
             </h1>
-            <p className="text-xs sm:text-sm text-white/60">
+            <p className="text-xs sm:text-sm text-white/60 hidden sm:block">
               Customer details and generated tattoos
             </p>
           </div>
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
+            <div className="lg:hidden">
+              <MobileNav />
+            </div>
             <Link
               href="/customers"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center justify-center"
             >
               ← Customers
             </Link>
             <Link
               href="/generate"
-              className="text-xs sm:text-sm text-black bg-white border border-white/30 px-3 py-1 rounded-full hover:bg-zinc-200"
+              className="text-xs sm:text-sm text-black bg-white border border-white/30 px-3 py-2 rounded-full hover:bg-zinc-200 min-h-[44px] flex items-center justify-center"
             >
               Generate
             </Link>
             <CreditsDisplay />
-            <Link
-              href="/credits"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
-            >
-              Credits
-            </Link>
-            <AuthButton />
+            <div className="hidden lg:flex gap-2 items-center">
+              <Link
+                href="/credits"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center justify-center"
+              >
+                Credits
+              </Link>
+              <AuthButton />
+            </div>
           </div>
         </div>
 
@@ -514,7 +538,7 @@ export default function CustomerDetailPage() {
         <div className="border border-white/10 bg-black/70 p-6 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-lg font-light">Customer Information</h2>
-            {!isEditing ? (
+            {!isEditing && customerId !== "personal" ? (
               <button
                 onClick={() => {
                   if (customer) {
@@ -525,7 +549,7 @@ export default function CustomerDetailPage() {
                     setError(null);
                   }
                 }}
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-4 py-2 rounded-full min-h-[44px] flex items-center justify-center"
               >
                 Edit
               </button>
@@ -534,14 +558,14 @@ export default function CustomerDetailPage() {
                 <button
                   onClick={handleCancelEdit}
                   disabled={saving}
-                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1 rounded-full disabled:opacity-50"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-4 py-2 rounded-full disabled:opacity-50 min-h-[44px] flex items-center justify-center"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveEdit}
                   disabled={saving}
-                  className="text-xs sm:text-sm text-black bg-white border border-white/30 px-3 py-1 rounded-full hover:bg-zinc-200 disabled:bg-white/30 disabled:text-black/40"
+                  className="text-xs sm:text-sm text-black bg-white border border-white/30 px-4 py-2 rounded-full hover:bg-zinc-200 disabled:bg-white/30 disabled:text-black/40 min-h-[44px] flex items-center justify-center"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
@@ -565,7 +589,7 @@ export default function CustomerDetailPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white"
+                  className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white min-h-[44px]"
                   placeholder="Customer name"
                 />
               ) : (
@@ -730,7 +754,7 @@ export default function CustomerDetailPage() {
                                   [toggleKey]: !prev[toggleKey],
                                 }));
                               }}
-                              className="absolute top-2 right-2 px-2 py-1 text-xs bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors z-10"
+                              className="absolute top-2 right-2 px-3 py-2 text-xs bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors z-10 min-h-[44px] flex items-center justify-center"
                               title={isShowingStencil ? "Show original" : "Show stencil"}
                             >
                               {isShowingStencil ? "Original" : "Stencil"}
@@ -745,7 +769,7 @@ export default function CustomerDetailPage() {
                               <button
                                 onClick={() => handleGenerateStencil(generation, idx, url)}
                                 disabled={generatingStencil[toggleKey]}
-                                className="px-2 py-1 text-xs bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-3 py-2 text-xs bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
                                 title="Generate stencil for this image"
                               >
                                 {generatingStencil[toggleKey] 
@@ -765,7 +789,7 @@ export default function CustomerDetailPage() {
                   <button
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    className="px-6 py-2 text-sm bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-6 py-3 text-sm bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
                   >
                     {loadingMore ? "Loading..." : `Load More (${generations.length - generationsToShow} remaining)`}
                   </button>

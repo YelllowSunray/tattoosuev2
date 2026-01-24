@@ -57,13 +57,13 @@ export default function PurchaseCredits() {
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-medium text-white/80">Purchase Credits</h3>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {CREDIT_PACKAGES.map((pkg, idx) => (
           <button
             key={idx}
             onClick={() => handlePurchase(idx)}
             disabled={loading !== null}
-            className="px-4 py-3 border border-white/20 bg-white/5 hover:bg-white/10 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-4 border border-white/20 bg-white/5 hover:bg-white/10 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed min-h-[80px]"
           >
             <div className="text-white font-medium">{pkg.credits} Credits</div>
             <div className="text-white/60 text-xs">€{pkg.price.toFixed(2)}</div>

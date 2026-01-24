@@ -7,6 +7,7 @@ import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
 import AuthButton from "./components/AuthButton";
 import CreditsDisplay from "./components/CreditsDisplay";
+import MobileNav from "./components/MobileNav";
 import {
   getAllTattooImages,
   getUniqueBodyParts,
@@ -27,6 +28,18 @@ export default function Home() {
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   const [visibleCount, setVisibleCount] = useState(200);
   const [showPriceDuration, setShowPriceDuration] = useState(true);
+
+  // Prevent body scroll when filters overlay is open
+  useEffect(() => {
+    if (showFiltersMobile) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [showFiltersMobile]);
 
   // Load tattoo data
   useEffect(() => {
@@ -147,40 +160,46 @@ export default function Home() {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(120,119,198,0.1),transparent_50%)] pointer-events-none" />
       
       {/* Header */}
-      <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
-          <div className="flex-1 flex justify-start gap-2">
-            <Link
-              href="/customers"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              Customers
-            </Link>
-            <Link
-              href="/generate"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              Generate
-            </Link>
-            <Link
-              href="/history"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              History
-            </Link>
+      <header className="relative border-b border-white/5 bg-black/95 lg:bg-black/40 backdrop-blur-xl sticky top-0 z-50 shadow-lg lg:shadow-none">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-12 py-3 flex items-center justify-between gap-2 sm:gap-4 relative">
+          {/* Mobile: Hamburger Menu, Desktop: Navigation Links */}
+          <div className="flex items-center justify-start gap-2 relative z-[100] flex-shrink-0">
+            <div className="hidden lg:flex gap-2">
+              <Link
+                href="/customers"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+              >
+                Customers
+              </Link>
+              <Link
+                href="/generate"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+              >
+                Generate
+              </Link>
+              <Link
+                href="/history"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+              >
+                History
+              </Link>
+            </div>
+            <div className="lg:hidden flex-shrink-0">
+              <MobileNav />
+            </div>
           </div>
-          <div className="text-center space-y-1">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-light tracking-tight">
+          <div className="text-center space-y-1 flex-shrink-0">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-light tracking-tight">
               <span className="bg-gradient-to-r from-white via-white/90 to-white/80 bg-clip-text text-transparent">
                 Sue&apos;s Tattoo
               </span>
             </h1>
-            <p className="text-white/50 text-xs md:text-sm font-light tracking-wide uppercase letter-spacing-wider">
+            <p className="text-white/50 text-[10px] sm:text-xs md:text-sm font-light tracking-wide uppercase letter-spacing-wider hidden sm:block">
               Discover Your Perfect Design
             </p>
           </div>
           <div className="flex-1 flex justify-end">
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <CreditsDisplay />
               <Link
                 href="/credits"
@@ -189,6 +208,9 @@ export default function Home() {
                 Credits
               </Link>
               <AuthButton />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+              <CreditsDisplay />
             </div>
           </div>
         </div>
@@ -237,7 +259,7 @@ export default function Home() {
               <div className="mb-6 flex items-center justify-between lg:hidden">
                 <button
                   onClick={() => setShowFiltersMobile(true)}
-                  className="px-4 py-2 text-sm font-medium text-black bg-white border border-white/20"
+                  className="px-4 py-3 text-sm font-medium text-black bg-white border border-white/20 min-h-[44px] min-w-[100px]"
                 >
                   Filters
                 </button>
@@ -321,7 +343,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => setVisibleCount((c) => c + 200)}
-                    className="px-4 py-2 text-sm font-medium text-black bg-white border border-white/20 hover:bg-zinc-200 transition-colors"
+                    className="px-6 py-3 text-sm font-medium text-black bg-white border border-white/20 hover:bg-zinc-200 transition-colors min-h-[44px]"
                   >
                     Load more ({filteredImages.length - visibleCount} more)
                   </button>
@@ -334,7 +356,7 @@ export default function Home() {
 
       {/* Mobile filters overlay */}
       {showFiltersMobile && !loading && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm p-4 overflow-y-auto lg:hidden">
+        <div className="fixed inset-0 z-[9998] bg-black/90 backdrop-blur-sm p-4 overflow-y-auto lg:hidden">
           <div className="max-w-xl mx-auto space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-white text-lg font-light tracking-wide">Filters</h2>

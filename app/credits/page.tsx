@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
 import PurchaseCredits from "../components/PurchaseCredits";
+import MobileNav from "../components/MobileNav";
+import CreditsDisplay from "../components/CreditsDisplay";
 
 interface CreditsData {
   credits: number;
@@ -115,43 +117,51 @@ export default function CreditsPage() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-40">
+      <header className="relative border-b border-white/5 bg-black/95 lg:bg-black/40 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-3 flex items-center justify-between gap-4">
           <div className="flex-1 flex justify-start gap-2">
-            <Link
-              href="/"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              ← Back to gallery
-            </Link>
-            <Link
-              href="/generate"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              Generate
-            </Link>
-            <Link
-              href="/customers"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              Customers
-            </Link>
-            <Link
-              href="/history"
-              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-            >
-              History
-            </Link>
+            <div className="hidden lg:flex gap-2">
+              <Link
+                href="/"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+              >
+                ← Back to gallery
+              </Link>
+              <Link
+                href="/generate"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+              >
+                Generate
+              </Link>
+              <Link
+                href="/customers"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+              >
+                Customers
+              </Link>
+              <Link
+                href="/history"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+              >
+                History
+              </Link>
+            </div>
+            <div className="lg:hidden">
+              <MobileNav />
+            </div>
           </div>
           <div className="flex-1 flex justify-end">
-            <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/credits"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
               >
                 Credits
               </Link>
               <AuthButton />
+            </div>
+            <div className="lg:hidden flex items-center gap-2">
+              <CreditsDisplay />
             </div>
           </div>
         </div>
@@ -185,7 +195,7 @@ export default function CreditsPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => fetchCredits(true)}
-                    className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-2 py-1 rounded"
+                    className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-3 py-2 rounded min-h-[44px] flex items-center justify-center"
                     title="Refresh credits"
                   >
                     ↻ Refresh
@@ -220,7 +230,7 @@ export default function CreditsPage() {
                 </div>
                 <button
                   onClick={() => fetchCredits(true)}
-                  className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-3 py-1.5 rounded transition-colors"
+                  className="text-xs text-white/60 hover:text-white/80 border border-white/20 px-4 py-3 rounded transition-colors min-h-[44px] flex items-center justify-center"
                   title="Refresh credits"
                 >
                   ↻ Refresh
