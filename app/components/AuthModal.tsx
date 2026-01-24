@@ -7,9 +7,16 @@ import { useAuth } from "@/lib/auth-context";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  signInMessage?: string;
+  signUpMessage?: string;
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+export default function AuthModal({
+  isOpen,
+  onClose,
+  signInMessage,
+  signUpMessage,
+}: AuthModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -64,8 +71,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </h2>
             <p className="text-sm text-white/60">
               {isSignUp
-                ? "Create an account to save and manage your tattoos"
-                : "Sign in to access your saved tattoos"}
+                ? signUpMessage || "Create an account to save and manage your tattoos"
+                : signInMessage || "Sign in to access your saved tattoos"}
             </p>
           </div>
 

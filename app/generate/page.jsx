@@ -7,6 +7,7 @@ import { storage } from "@/lib/firebase";
 import { ref, uploadString } from "firebase/storage";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
+import AuthModal from "../components/AuthModal";
 import CustomerSelector from "../components/CustomerSelector";
 import CreditsDisplay from "../components/CreditsDisplay";
 import PurchaseCredits from "../components/PurchaseCredits";
@@ -62,6 +63,7 @@ export default function GeneratePage() {
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState(null);
   const [isForMe, setIsForMe] = useState(false);
+  const [userMode, setUserMode] = useState("individual"); // "individual" or "parlor"
   const [isGeneratingStencils, setIsGeneratingStencils] = useState(false);
   const [stencils, setStencils] = useState(null);
   const [userCredits, setUserCredits] = useState(null);
@@ -76,6 +78,8 @@ export default function GeneratePage() {
   const [showSkinColorInfo, setShowSkinColorInfo] = useState(false);
   const [showSubjectInfo, setShowSubjectInfo] = useState(false);
   const [showNumberOfImagesInfo, setShowNumberOfImagesInfo] = useState(false);
+  const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [formWasReset, setFormWasReset] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
@@ -258,6 +262,69 @@ export default function GeneratePage() {
     
     fetchUserCredits();
   }, [user]);
+
+  // Load user mode from Firebase (with localStorage fallback)
+  useEffect(() => {
+    async function loadUserMode() {
+      if (!user) {
+        // If not authenticated, use localStorage
+        const savedMode = localStorage.getItem("userMode");
+        if (savedMode === "individual" || savedMode === "parlor") {
+          setUserMode(savedMode);
+        } else {
+          setUserMode("individual");
+          localStorage.setItem("userMode", "individual");
+        }
+        return;
+      }
+
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/mode", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const mode = data.mode || "individual";
+          setUserMode(mode);
+          // Also save to localStorage for offline access
+          localStorage.setItem("userMode", mode);
+        } else {
+          // Fallback to localStorage if Firebase fails
+          const savedMode = localStorage.getItem("userMode");
+          if (savedMode === "individual" || savedMode === "parlor") {
+            setUserMode(savedMode);
+          } else {
+            setUserMode("individual");
+            localStorage.setItem("userMode", "individual");
+          }
+        }
+      } catch (error) {
+        console.error("Error loading user mode:", error);
+        // Fallback to localStorage
+        const savedMode = localStorage.getItem("userMode");
+        if (savedMode === "individual" || savedMode === "parlor") {
+          setUserMode(savedMode);
+        } else {
+          setUserMode("individual");
+          localStorage.setItem("userMode", "individual");
+        }
+      }
+    }
+    
+    loadUserMode();
+  }, [user]);
+
+  // Auto-set isForMe in Individual mode
+  useEffect(() => {
+    if (userMode === "individual") {
+      setIsForMe(true);
+      setSelectedCustomerId(null);
+    }
+  }, [userMode]);
 
   // Fetch customer name when selectedCustomerId changes
   useEffect(() => {
@@ -529,10 +596,15 @@ export default function GeneratePage() {
       return;
     }
     
-    // Require customer selection or "For Me" mode
-    if (!selectedCustomerId && !isForMe) {
-      setResultText("Please select a customer or click 'For Me' before generating.");
+    // Require customer selection (only in parlor mode)
+    if (userMode === "parlor" && !selectedCustomerId) {
+      setResultText("Please select a customer before generating.");
       return;
+    }
+    
+    // In individual mode, always use "For Me"
+    if (userMode === "individual") {
+      setIsForMe(true);
     }
 
     setIsGenerating(true);
@@ -1110,44 +1182,214 @@ export default function GeneratePage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="hidden sm:flex items-center gap-2 flex-wrap">
-              <Link
-                href="/"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-              >
-                ← Back to gallery
-              </Link>
-              <Link
-                href="/history"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-              >
-                History
-              </Link>
-              <Link
-                href="/customers"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-              >
-                Customers
-              </Link>
+              {user && (
+                <>
+                  <Link
+                    href="/"
+                    className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                  >
+                    ← Back to gallery
+                  </Link>
+                  <Link
+                    href="/history"
+                    className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                  >
+                    History
+                  </Link>
+                  {userMode === "parlor" && (
+                    <Link
+                      href="/customers"
+                      className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                    >
+                      Customers
+                    </Link>
+                  )}
+                </>
+              )}
             </div>
             <div className="hidden sm:flex items-center gap-2">
-              <CreditsDisplay />
-              <Link
-                href="/credits"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-              >
-                Credits
-              </Link>
+              {/* Mode Toggle */}
+              <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (userMode !== "individual") {
+                        setUserMode("individual");
+                        localStorage.setItem("userMode", "individual");
+                        setIsForMe(true);
+                        setSelectedCustomerId(null);
+                        
+                        // Save to Firebase
+                        if (user) {
+                          try {
+                            const token = await user.getIdToken();
+                            await fetch("/api/users/mode", {
+                              method: "PUT",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ mode: "individual" }),
+                            });
+                          } catch (error) {
+                            console.error("Error saving user mode to Firebase:", error);
+                          }
+                        }
+                      }
+                    }}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                    userMode === "individual"
+                      ? "bg-white text-black"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                  title="Individual Mode"
+                >
+                  Individual
+                </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (userMode !== "parlor") {
+                        setUserMode("parlor");
+                        localStorage.setItem("userMode", "parlor");
+                        // Reset customer field when switching to parlor mode
+                        setIsForMe(false);
+                        setSelectedCustomerId(null);
+                        setSelectedCustomerName(null);
+                        
+                        // Save to Firebase
+                        if (user) {
+                          try {
+                            const token = await user.getIdToken();
+                            await fetch("/api/users/mode", {
+                              method: "PUT",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ mode: "parlor" }),
+                            });
+                          } catch (error) {
+                            console.error("Error saving user mode to Firebase:", error);
+                          }
+                        }
+                      }
+                    }}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                    userMode === "parlor"
+                      ? "bg-white text-black"
+                      : "text-white/40 hover:text-white/60"
+                  }`}
+                  title="Parlor Mode"
+                >
+                  Parlor
+                </button>
+              </div>
+              {user && (
+                <>
+                  <CreditsDisplay />
+                  <Link
+                    href="/credits"
+                    className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                  >
+                    Credits
+                  </Link>
+                </>
+              )}
+              {!user && <AuthButton />}
             </div>
             <div className="sm:hidden flex items-center justify-between w-full">
               <MobileNav />
               <div className="flex items-center gap-2">
-                <CreditsDisplay />
-                <Link
-                  href="/credits"
-                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-                >
-                  Credits
-                </Link>
+                {/* Mode Toggle */}
+                <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (userMode !== "individual") {
+                        setUserMode("individual");
+                        localStorage.setItem("userMode", "individual");
+                        setIsForMe(true);
+                        setSelectedCustomerId(null);
+
+                        // Save to Firebase
+                        if (user) {
+                          try {
+                            const token = await user.getIdToken();
+                            await fetch("/api/users/mode", {
+                              method: "PUT",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ mode: "individual" }),
+                            });
+                          } catch (error) {
+                            console.error("Error saving user mode to Firebase:", error);
+                          }
+                        }
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                      userMode === "individual"
+                        ? "bg-white text-black"
+                        : "text-white/40 hover:text-white/60"
+                    }`}
+                    title="Individual Mode"
+                  >
+                    Individual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (userMode !== "parlor") {
+                        setUserMode("parlor");
+                        localStorage.setItem("userMode", "parlor");
+                        // Reset customer field when switching to parlor mode
+                        setIsForMe(false);
+                        setSelectedCustomerId(null);
+                        setSelectedCustomerName(null);
+
+                        // Save to Firebase
+                        if (user) {
+                          try {
+                            const token = await user.getIdToken();
+                            await fetch("/api/users/mode", {
+                              method: "PUT",
+                              headers: {
+                                "Content-Type": "application/json",
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({ mode: "parlor" }),
+                            });
+                          } catch (error) {
+                            console.error("Error saving user mode to Firebase:", error);
+                          }
+                        }
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                      userMode === "parlor"
+                        ? "bg-white text-black"
+                        : "text-white/40 hover:text-white/60"
+                    }`}
+                    title="Parlor Mode"
+                  >
+                    Parlor
+                  </button>
+                </div>
+                {user && (
+                  <>
+                    <CreditsDisplay />
+                    <Link
+                      href="/credits"
+                      className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
+                    >
+                      Credits
+                    </Link>
+                  </>
+                )}
+                {!user && <AuthButton />}
               </div>
             </div>
           </div>
@@ -1178,69 +1420,55 @@ export default function GeneratePage() {
               <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mx-auto" />
               <p className="text-sm text-white/60">Loading...</p>
             </div>
-          ) : !user ? (
-            <div className="border border-white/20 bg-black/60 p-8 text-center space-y-4">
-              <h2 className="text-xl font-light">Sign in Required</h2>
-              <p className="text-sm text-white/60">
-                You need to sign in to generate tattoo designs.
-              </p>
-              <div className="pt-2">
-                <AuthButton />
-              </div>
-            </div>
           ) : (
           <form onSubmit={handleGenerate} className="space-y-6">
-          {/* Customer Selection */}
-          <div className="space-y-2">
-            <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
-              selectedCustomerId !== null || isForMe
-                ? "text-white font-semibold" 
-                : "text-white/60 font-normal"
-            }`}>
-              <span>Customer <span className="text-red-400">(Mandatory)</span></span>
-              {renderInfoButton(showCustomerInfo, setShowCustomerInfo)}
-            </label>
-            {showCustomerInfo && (
-              <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
-                <p className="text-[11px] text-white/60 leading-relaxed">
-                  Select a customer from your customer list, or click &quot;For Me&quot; to generate a personal design for yourself. Customers must be created on the Customers page before they can be selected here. This helps track which designs are for which customers.
-                </p>
-              </div>
-            )}
-            <div className="flex items-center gap-2">
-              {isForMe ? (
-                <div className="flex-1 w-full bg-black border border-white/30 text-sm px-4 py-3 flex items-center min-h-[44px]">
-                  <span className="text-white/70">A personal design generation for you.</span>
+          {/* Customer Selection - Only show in Parlor mode */}
+          {userMode === "parlor" && (
+            <div className="space-y-2">
+              <label className={`block text-xs uppercase tracking-[0.16em] flex items-center gap-2 ${
+                selectedCustomerId !== null
+                  ? "text-white font-semibold" 
+                  : "text-white/60 font-normal"
+              }`}>
+                <span>Customer <span className="text-red-400">(Mandatory)</span></span>
+                {renderInfoButton(showCustomerInfo, setShowCustomerInfo)}
+              </label>
+              {showCustomerInfo && (
+                <div className="mb-2 p-3 border border-white/10 bg-black/40 rounded">
+                  <p className="text-[11px] text-white/60 leading-relaxed">
+                    Select a customer from your customer list. You can create new customers directly from this page using the &quot;+ Add Customer&quot; button.
+                  </p>
                 </div>
-              ) : (
+              )}
+              <div className="flex items-center gap-2">
                 <div className="flex-1">
                   <CustomerSelector
                     selectedCustomerId={selectedCustomerId}
                     onSelectCustomer={setSelectedCustomerId}
                     hideLabel={true}
+                    placeholder="Type in a customer name and select or add a customer, or switch to individual mode for personal design"
                   />
                 </div>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isForMe) {
-                    setIsForMe(false);
-                  } else {
-                    setIsForMe(true);
-                    setSelectedCustomerId(null);
-                  }
-                }}
-                className={`px-4 py-3 text-xs sm:text-sm border transition-colors min-h-[44px] flex items-center justify-center whitespace-nowrap ${
-                  isForMe
-                    ? "bg-white text-black border-white"
-                    : "bg-transparent text-white/70 border-white/30 hover:bg-white/10"
-                }`}
-              >
-                For Me
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateCustomerModal(true)}
+                  className="px-3 py-3 text-xs sm:text-sm text-white/70 border border-white/30 hover:bg-white/10 transition-colors min-h-[44px] flex items-center justify-center whitespace-nowrap"
+                  title="Create new customer"
+                >
+                  + Add Customer
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+          
+          {/* Individual mode - show hidden customer info */}
+          {userMode === "individual" && (
+            <div className="space-y-2">
+              <div className="flex-1 w-full bg-black border border-white/30 text-sm px-4 py-3 flex items-center min-h-[44px]">
+                <span className="text-white/70">Personal design generation for you.</span>
+              </div>
+            </div>
+          )}
           
           {/* Model picker */}
           <div className="space-y-2">
@@ -2118,7 +2346,7 @@ export default function GeneratePage() {
             const requiredCredits = numberOfImages * CREDIT_COSTS.GENERATE_DESIGN;
             const hasEnoughCredits = userCredits !== null && userCredits >= requiredCredits;
             const insufficientCredits = userCredits !== null && userCredits < requiredCredits;
-            const missingCustomer = !selectedCustomerId && !isForMe;
+            const missingCustomer = userMode === "parlor" && !selectedCustomerId;
             const missingPrompt = !prompt.trim();
             const showCustomerHelp = hasEnoughCredits && missingCustomer;
             const showPromptHelp = missingPrompt && !missingCustomer && hasEnoughCredits;
@@ -2129,7 +2357,7 @@ export default function GeneratePage() {
               const parts = [];
               
               // 1. Customer (always show)
-              if (isForMe) {
+              if (userMode === "individual") {
                 parts.push("Customer: For Me");
               } else if (selectedCustomerId && selectedCustomerName) {
                 parts.push(`Customer: ${selectedCustomerName}`);
@@ -2257,27 +2485,40 @@ export default function GeneratePage() {
             
             return (
               <div className="space-y-2">
-                <button
-                  type="submit"
-                  disabled={isGenerating || missingPrompt || missingCustomer || insufficientCredits}
-                  className={`w-full sm:w-auto px-6 py-3 text-sm font-medium min-h-[44px] ${
-                    insufficientCredits || (missingCustomer && hasEnoughCredits) || (missingPrompt && !missingCustomer && hasEnoughCredits)
-                      ? "bg-red-600 text-white border border-red-500 cursor-not-allowed"
-                      : isButtonEnabled
-                        ? "text-black bg-white border border-white/20 hover:bg-white/90 cursor-pointer"
-                        : "text-black/40 bg-white/30 border border-white/20 cursor-not-allowed"
-                  }`}
-                >
-                  {isGenerating 
-                    ? `Generating ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}...` 
-                    : insufficientCredits
-                      ? "Not enough Credits to Generate Tattoo"
-                      : missingCustomer && hasEnoughCredits
-                        ? "Fill in Customer Field"
-                        : missingPrompt && !missingCustomer && hasEnoughCredits
-                          ? "Fill in Subject/Design Elements Field"
-                          : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${requiredCredits} credit${requiredCredits > 1 ? "s" : ""}`}
-                </button>
+                {!user ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full sm:w-auto px-6 py-3 text-sm font-medium min-h-[44px] bg-red-600 text-white border border-red-500 cursor-pointer hover:bg-red-700"
+                  >
+                    Sign in first
+                  </button>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={isGenerating || missingPrompt || missingCustomer || insufficientCredits}
+                    className={`w-full sm:w-auto px-6 py-3 text-sm font-medium min-h-[44px] ${
+                      insufficientCredits || (missingCustomer && hasEnoughCredits) || (missingPrompt && !missingCustomer && hasEnoughCredits)
+                        ? "bg-red-600 text-white border border-red-500 cursor-not-allowed"
+                        : isButtonEnabled
+                          ? "text-black bg-white border border-white/20 hover:bg-white/90 cursor-pointer"
+                          : "text-black/40 bg-white/30 border border-white/20 cursor-not-allowed"
+                    }`}
+                  >
+                    {isGenerating 
+                      ? `Generating ${numberOfImages} design${numberOfImages > 1 ? "s" : ""}...` 
+                      : insufficientCredits
+                        ? "Not enough Credits to Generate Tattoo"
+                        : missingCustomer && hasEnoughCredits
+                          ? "Fill in Customer Field"
+                          : missingPrompt && !missingCustomer && hasEnoughCredits
+                            ? "Fill in Subject/Design Elements Field"
+                            : `Generate ${numberOfImages} design${numberOfImages > 1 ? "s" : ""} for ${requiredCredits} credit${requiredCredits > 1 ? "s" : ""}`}
+                  </button>
+                )}
                 {isButtonEnabled && !isGenerating && (
                   <div className="mt-3 p-4 bg-black/40 border border-white/20 rounded max-w-2xl">
                     <p className="text-sm text-white/80 leading-relaxed font-medium">
@@ -2287,22 +2528,7 @@ export default function GeneratePage() {
                 )}
                 {showCustomerHelp && (
                   <p className="text-xs text-white/60 max-w-md">
-                    Either create a customer on the{" "}
-                    <Link href="/customers" className="text-white/80 hover:text-white underline">
-                      customer page
-                    </Link>
-                    , and fill them in the customer field, or on the right of the customer field click{" "}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsForMe(true);
-                        setSelectedCustomerId(null);
-                      }}
-                      className="text-white/80 hover:text-white underline font-medium"
-                    >
-                      "For Me"
-                    </button>
-                    {" "}for personal designs for you.
+                    Create a customer using the &quot;+ Add Customer&quot; button, or select an existing customer from the dropdown.
                   </p>
                 )}
                 {showPromptHelp && (
@@ -2477,6 +2703,196 @@ export default function GeneratePage() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Create Customer Modal */}
+      {showCreateCustomerModal && user && (
+        <CreateCustomerModal
+          isOpen={showCreateCustomerModal}
+          onClose={() => setShowCreateCustomerModal(false)}
+          onSuccess={async (customerId) => {
+            // Refresh customer list by triggering a re-render
+            // The CustomerSelector will automatically refresh
+            setSelectedCustomerId(customerId);
+            setIsForMe(false);
+            setShowCreateCustomerModal(false);
+          }}
+          userId={user.uid}
+        />
+      )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        signInMessage="Sign in to create AI tattoo designs"
+      />
+    </div>
+  );
+}
+
+// Customer Creation Modal Component
+function CreateCustomerModal({ isOpen, onClose, onSuccess, userId }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const { user } = useAuth();
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    
+    if (!name.trim() || !email.trim() || !phone.trim()) {
+      setError("Name, email, and phone are required");
+      return;
+    }
+
+    if (!user) {
+      setError("You must be signed in to create a customer");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          notes: notes.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setName("");
+        setEmail("");
+        setPhone("");
+        setNotes("");
+        onSuccess(data.customerId);
+      } else {
+        setError(data.error || "Failed to create customer");
+      }
+    } catch (err) {
+      console.error("Error creating customer:", err);
+      setError("Failed to create customer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm overflow-y-auto p-4">
+      <div className="relative w-full max-w-md mx-auto my-auto bg-black border border-white/20 p-4 sm:p-6 lg:p-8">
+        <button
+          onClick={onClose}
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/60 hover:text-white text-2xl leading-none min-w-[44px] min-h-[44px] flex items-center justify-center"
+          aria-label="Close"
+        >
+          ×
+        </button>
+
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-2xl font-light tracking-tight text-white mb-2">
+              Add Customer
+            </h2>
+            <p className="text-sm text-white/60">
+              Create a new customer profile
+            </p>
+          </div>
+
+          {error && (
+            <div className="p-3 bg-red-900/30 border border-red-500/50 text-red-200 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-[0.16em] mb-2">
+                Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white min-h-[44px]"
+                placeholder="Customer name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-[0.16em] mb-2">
+                Email <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white min-h-[44px]"
+                placeholder="customer@email.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-[0.16em] mb-2">
+                Phone <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white min-h-[44px]"
+                placeholder="(555) 123-4567"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-white/60 uppercase tracking-[0.16em] mb-2">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full bg-black border border-white/30 text-sm px-3 py-2 outline-none focus:border-white text-white resize-none"
+                placeholder="Additional notes about the customer..."
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-3 text-sm font-medium text-white border border-white/30 hover:bg-white/10 min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 px-4 py-3 text-sm font-medium text-black bg-white border border-white/20 disabled:bg-white/30 disabled:text-black/40 disabled:cursor-not-allowed min-h-[44px]"
+              >
+                {loading ? "Creating..." : "Create Customer"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

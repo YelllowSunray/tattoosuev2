@@ -209,6 +209,7 @@ export default function CustomersPage() {
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, loading: authLoading } = useAuth();
+  const isLoading = authLoading || loading;
 
   const loadCustomers = async () => {
     if (!user) return;
@@ -298,31 +299,6 @@ export default function CustomersPage() {
     loadCustomers();
   }, [user, authLoading]);
 
-  if (authLoading || loading) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mb-4" />
-          <p className="text-white/60 text-sm">Loading customers...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl font-light">Sign in Required</h1>
-          <p className="text-sm text-white/60">
-            You need to sign in to view customers.
-          </p>
-          <AuthButton />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-black text-white px-4 py-10">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -372,72 +348,89 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {error && (
-          <div className="border border-red-500/50 bg-red-900/30 p-4 text-red-200 text-sm">
-            {error}
+        {isLoading ? (
+          <div className="flex items-center justify-center min-h-[50vh]">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-white/20 border-t-white mb-4" />
+              <p className="text-white/60 text-sm">Loading customers...</p>
+            </div>
           </div>
-        )}
+        ) : !user ? (
+          <div className="text-center min-h-[40vh] flex flex-col items-center justify-center space-y-4">
+            <h1 className="text-2xl font-light">Sign in Required</h1>
+            <p className="text-sm text-white/60">
+              You need to sign in to view customers.
+            </p>
+            <AuthButton />
+          </div>
+        ) : (
+          <>
+            {error && (
+              <div className="border border-red-500/50 bg-red-900/30 p-4 text-red-200 text-sm">
+                {error}
+              </div>
+            )}
 
-        {/* Personal Designs Section */}
-        {personalDesigns.length > 0 && (() => {
-          // Calculate total designs across all personal generations
-          const totalDesigns = personalDesigns.reduce((total, design) => {
-            return total + (design.images?.length || 0);
-          }, 0);
-          
-          // Get the most recent creation date
-          const mostRecentDate = personalDesigns.length > 0 
-            ? new Date(Math.max(...personalDesigns.map(d => new Date(d.createdAt).getTime())))
-            : null;
-          
-          return (
-            <div className="mb-8">
-              <h2 className="text-xl font-light mb-4">Personal Designs</h2>
-              <Link
-                href={`/customers/personal`}
-                className="block border border-white/10 bg-black/70 p-4 hover:bg-black/90 transition-colors max-w-md"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-lg font-medium text-white flex-1">
-                      Personal Design
-                    </h3>
-                    <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
-                      {totalDesigns} {totalDesigns === 1 ? "design" : "designs"}
-                    </span>
-                  </div>
-                  <div className="text-xs text-white/60">
-                    <div>A personal design generation for you.</div>
-                  </div>
-                  {mostRecentDate && (
-                    <div className="text-xs text-white/50 pt-2 border-t border-white/10">
-                      Last updated {mostRecentDate.toLocaleDateString()}
+            {/* Personal Designs Section */}
+            {personalDesigns.length > 0 && (() => {
+              // Calculate total designs across all personal generations
+              const totalDesigns = personalDesigns.reduce((total, design) => {
+                return total + (design.images?.length || 0);
+              }, 0);
+              
+              // Get the most recent creation date
+              const mostRecentDate = personalDesigns.length > 0 
+                ? new Date(Math.max(...personalDesigns.map(d => new Date(d.createdAt).getTime())))
+                : null;
+              
+              return (
+                <div className="mb-8">
+                  <h2 className="text-xl font-light mb-4">Personal Designs</h2>
+                  <Link
+                    href={`/customers/personal`}
+                    className="block border border-white/10 bg-black/70 p-4 hover:bg-black/90 transition-colors max-w-md"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="text-lg font-medium text-white flex-1">
+                          Personal Design
+                        </h3>
+                        <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded-full">
+                          {totalDesigns} {totalDesigns === 1 ? "design" : "designs"}
+                        </span>
+                      </div>
+                      <div className="text-xs text-white/60">
+                        <div>A personal design generation for you.</div>
+                      </div>
+                      {mostRecentDate && (
+                        <div className="text-xs text-white/50 pt-2 border-t border-white/10">
+                          Last updated {mostRecentDate.toLocaleDateString()}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </Link>
                 </div>
-              </Link>
-            </div>
-          );
-        })()}
+              );
+            })()}
 
-        {/* Customer Designs Section */}
-        {customers.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-xl font-light mb-4">Customer Designs</h2>
-            {/* Search Bar */}
-            <div className="space-y-2 mb-4">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search customers by name, email, or phone..."
-                className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
-              />
-            </div>
-          </div>
-        )}
+            {/* Customer Designs Section */}
+            {customers.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-xl font-light mb-4">Customer Designs</h2>
+                {/* Search Bar */}
+                <div className="space-y-2 mb-4">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search customers by name, email, or phone..."
+                    className="w-full bg-black border border-white/30 text-sm sm:text-base px-4 py-3 outline-none focus:border-white text-white placeholder:text-white/40 min-h-[44px]"
+                  />
+                </div>
+              </div>
+            )}
 
-        {(() => {
+            {(() => {
           // Filter customers based on search query
           const filteredCustomers = customers.filter((customer) => {
             if (!searchQuery.trim()) return true;
@@ -525,14 +518,16 @@ export default function CustomersPage() {
               ))}
             </div>
           );
-        })()}
+            })()}
 
-        <CustomerModal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          onSuccess={loadCustomers}
-          userId={user.uid}
-        />
+            <CustomerModal
+              isOpen={showModal}
+              onClose={() => setShowModal(false)}
+              onSuccess={loadCustomers}
+              userId={user.uid}
+            />
+          </>
+        )}
       </div>
     </div>
   );

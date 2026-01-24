@@ -16,10 +16,27 @@ interface CreditsData {
 
 export default function CreditsPage() {
   const { user, loading: authLoading } = useAuth();
+  const [userMode, setUserMode] = useState("individual");
+
+  // Load user mode from localStorage
+  useEffect(() => {
+    const savedMode = localStorage.getItem("userMode");
+    if (savedMode === "individual" || savedMode === "parlor") {
+      setUserMode(savedMode);
+    }
+  }, []);
   const [creditsData, setCreditsData] = useState<CreditsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const previousCreditsRef = useRef<number>(0);
+
+  // Load user mode from localStorage
+  useEffect(() => {
+    const savedMode = localStorage.getItem("userMode");
+    if (savedMode === "individual" || savedMode === "parlor") {
+      setUserMode(savedMode);
+    }
+  }, []);
 
   const fetchCredits = useCallback(async (showLoading = false) => {
     if (!user) {
@@ -133,12 +150,14 @@ export default function CreditsPage() {
               >
                 Generate
               </Link>
-              <Link
-                href="/customers"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
-              >
-                Customers
-              </Link>
+              {userMode === "parlor" && (
+                <Link
+                  href="/customers"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+                >
+                  Customers
+                </Link>
+              )}
               <Link
                 href="/history"
                 className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"

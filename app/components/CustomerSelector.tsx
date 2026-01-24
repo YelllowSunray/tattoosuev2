@@ -15,6 +15,7 @@ interface CustomerSelectorProps {
   onSelectCustomer: (customerId: string | null) => void;
   onCreateNew?: () => void;
   hideLabel?: boolean;
+  placeholder?: string;
 }
 
 export default function CustomerSelector({
@@ -22,6 +23,7 @@ export default function CustomerSelector({
   onSelectCustomer,
   onCreateNew,
   hideLabel = false,
+  placeholder,
 }: CustomerSelectorProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -141,7 +143,7 @@ export default function CustomerSelector({
             placeholder={
               selectedCustomer 
                 ? "Search for another customer..." 
-                : "Create customer on customer page OR click 'For Me' for personal design"
+                : placeholder || "Create customer on customer page OR click 'For Me' for personal design"
             }
             className="w-full bg-black border border-white/30 text-xs sm:text-sm px-3 py-2 outline-none focus:border-white text-white"
           />

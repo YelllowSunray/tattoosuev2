@@ -8,19 +8,72 @@ import CreditsDisplay from "./CreditsDisplay";
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
+  const [userMode, setUserMode] = useState("individual");
   const { user } = useAuth();
 
-  // Prevent body scroll when menu is open
+  // Prevent body scroll when menu is open and refresh mode when opened
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
+
+      const loadUserMode = async () => {
+        if (!user) {
+          // If not authenticated, use localStorage
+          const savedMode = localStorage.getItem("userMode");
+          if (savedMode === "individual" || savedMode === "parlor") {
+            setUserMode(savedMode);
+          } else {
+            setUserMode("individual");
+            localStorage.setItem("userMode", "individual");
+          }
+          return;
+        }
+
+        try {
+          const token = await user.getIdToken();
+          const res = await fetch("/api/users/mode", {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const mode = data.mode || "individual";
+            setUserMode(mode);
+            // Also save to localStorage for offline access
+            localStorage.setItem("userMode", mode);
+          } else {
+            // Fallback to localStorage if Firebase fails
+            const savedMode = localStorage.getItem("userMode");
+            if (savedMode === "individual" || savedMode === "parlor") {
+              setUserMode(savedMode);
+            } else {
+              setUserMode("individual");
+              localStorage.setItem("userMode", "individual");
+            }
+          }
+        } catch (error) {
+          console.error("Error loading user mode:", error);
+          // Fallback to localStorage
+          const savedMode = localStorage.getItem("userMode");
+          if (savedMode === "individual" || savedMode === "parlor") {
+            setUserMode(savedMode);
+          } else {
+            setUserMode("individual");
+            localStorage.setItem("userMode", "individual");
+          }
+        }
+      };
+
+      loadUserMode();
     } else {
       document.body.style.overflow = "";
     }
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   return (
     <>
@@ -81,56 +134,144 @@ export default function MobileNav() {
 
               <div className="bg-black border border-white/10 rounded-xl p-4 space-y-4">
                 <nav className="space-y-3">
-                  <Link
-                    href="/"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
-                  >
-                    Gallery
-                  </Link>
+                  {user && (
+                    <Link
+                      href="/"
+                      onClick={() => setIsOpen(false)}
+                      className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                    >
+                      Gallery
+                    </Link>
+                  )}
                   <Link
                     href="/generate"
                     onClick={() => setIsOpen(false)}
                     className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
                   >
-                    Generate
+                    {user ? "Generate" : "Generate a AI Custom Tattoo"}
                   </Link>
-                  <Link
-                    href="/customers"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
-                  >
-                    Customers
-                  </Link>
-                  <Link
-                    href="/history"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
-                  >
-                    History
-                  </Link>
-                  <Link
-                    href="/credits"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
-                  >
-                    Credits
-                  </Link>
+                  {user && userMode === "parlor" && (
+                    <Link
+                      href="/customers"
+                      onClick={() => setIsOpen(false)}
+                      className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                    >
+                      Customers
+                    </Link>
+                  )}
+                  {user && (
+                    <Link
+                      href="/history"
+                      onClick={() => setIsOpen(false)}
+                      className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                    >
+                      History
+                    </Link>
+                  )}
+                  {user && (
+                    <div className="space-y-2">
+                      <Link
+                        href="/credits"
+                        onClick={() => setIsOpen(false)}
+                        className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                      >
+                        Credits
+                      </Link>
+                      <div className="px-6 pb-2">
+                        <div className="text-xs text-white/60 mb-1">Credits Remaining</div>
+                        <CreditsDisplay />
+                      </div>
+                    </div>
+                  )}
                 </nav>
 
-                {user && (
-                  <div className="pt-4 border-t border-white/20 space-y-4">
-                    <div className="px-2">
-                      <CreditsDisplay />
+                {/* Mode Toggle */}
+                <div className="pt-4 border-t border-white/20 space-y-3">
+                  <div className="px-2">
+                    <div className="text-xs text-white/60 mb-2">Mode</div>
+                    <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40 w-fit">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (userMode !== "individual") {
+                            setUserMode("individual");
+                            localStorage.setItem("userMode", "individual");
+                            
+                            // Save to Firebase
+                            if (user) {
+                              try {
+                                const token = await user.getIdToken();
+                                await fetch("/api/users/mode", {
+                                  method: "PUT",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                  body: JSON.stringify({ mode: "individual" }),
+                                });
+                              } catch (error) {
+                                console.error("Error saving user mode to Firebase:", error);
+                              }
+                            }
+                          }
+                        }}
+                        className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                          userMode === "individual"
+                            ? "bg-white text-black"
+                            : "text-white/40 hover:text-white/60"
+                        }`}
+                        title="Individual Mode"
+                      >
+                        Individual
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (userMode !== "parlor") {
+                            setUserMode("parlor");
+                            localStorage.setItem("userMode", "parlor");
+                            
+                            // Save to Firebase
+                            if (user) {
+                              try {
+                                const token = await user.getIdToken();
+                                await fetch("/api/users/mode", {
+                                  method: "PUT",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${token}`,
+                                  },
+                                  body: JSON.stringify({ mode: "parlor" }),
+                                });
+                              } catch (error) {
+                                console.error("Error saving user mode to Firebase:", error);
+                              }
+                            }
+                          }
+                        }}
+                        className={`px-3 py-1.5 text-xs rounded-full transition-colors whitespace-nowrap ${
+                          userMode === "parlor"
+                            ? "bg-white text-black"
+                            : "text-white/40 hover:text-white/60"
+                        }`}
+                        title="Parlor Mode"
+                      >
+                        Parlor
+                      </button>
                     </div>
-                    <div className="px-2 flex items-center justify-between gap-2">
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/20 space-y-4">
+                  <div className="px-2 flex items-center justify-between gap-2">
+                    {user && (
                       <span className="text-sm text-white/70 truncate">
                         {user.email}
                       </span>
-                      <AuthButton />
-                    </div>
+                    )}
+                    <AuthButton />
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
