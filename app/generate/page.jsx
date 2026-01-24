@@ -1158,9 +1158,7 @@ export default function GeneratePage() {
                   Generate Tattoo Design
                 </h1>
                 <p className="text-xs sm:text-sm text-white/60 mt-1">
-                  Choose a model and describe the tattoo you want. This page is
-                  wired up for different AI models to help you explore tattoo
-                  ideas.
+                  Create custom tattoo designs with AI. Describe your vision, select styles and preferences, and generate unique tattoo artwork tailored to your needs.
                 </p>
               </div>
               <button
