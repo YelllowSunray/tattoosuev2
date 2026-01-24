@@ -37,17 +37,49 @@ export default function AuthModal({
     setLoading(true);
 
     try {
-      if (isSignUp) {
-        await signUp(email, password);
-      } else {
-        await signIn(email, password);
-      }
+      // Add a timeout wrapper to ensure loading state is cleared even if auth hangs
+      const authPromise = isSignUp 
+        ? signUp(email, password)
+        : signIn(email, password);
+      
+      // Race against a timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Request timed out. Please check your connection and try again.")), 35000);
+      });
+      
+      await Promise.race([authPromise, timeoutPromise]);
+      
+      // Only close modal if auth succeeded
       onClose();
       setEmail("");
       setPassword("");
       setIsSignUp(false);
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      console.error("Auth error:", err);
+      // Provide more user-friendly error messages
+      let errorMessage = "An error occurred";
+      if (err.message) {
+        if (err.message.includes("timeout")) {
+          errorMessage = err.message;
+        } else if (err.message.includes("Network error") || err.message.includes("network-request-failed")) {
+          errorMessage = "Network error. Please check your connection. If this persists, verify Firebase configuration in Vercel environment variables.";
+        } else if (err.message.includes("user-not-found") || err.message.includes("wrong-password")) {
+          errorMessage = "Invalid email or password";
+        } else if (err.message.includes("email-already-in-use")) {
+          errorMessage = "This email is already registered. Please sign in instead.";
+        } else if (err.message.includes("weak-password")) {
+          errorMessage = "Password should be at least 6 characters";
+        } else if (err.message.includes("invalid-email")) {
+          errorMessage = "Please enter a valid email address";
+        } else if (err.code === 'auth/network-request-failed') {
+          errorMessage = "Network error. Please check your internet connection and Firebase configuration.";
+        } else {
+          errorMessage = err.message;
+        }
+      } else if (err.code === 'auth/network-request-failed') {
+        errorMessage = "Network error. Please check your internet connection and Firebase configuration.";
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -37,11 +37,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    // Add timeout to prevent hanging on Vercel
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Sign in request timed out. Please check your connection and try again.")), 30000);
+    });
+    
+    try {
+      const signInPromise = signInWithEmailAndPassword(auth, email, password);
+      await Promise.race([signInPromise, timeoutPromise]);
+    } catch (error: any) {
+      // Handle network errors specifically
+      if (error?.code === 'auth/network-request-failed') {
+        throw new Error("Network error. Please check your internet connection and ensure Firebase is properly configured. If the problem persists, check your Firebase Auth domain settings.");
+      }
+      throw error;
+    }
   };
 
   const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+    // Add timeout to prevent hanging on Vercel
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Sign up request timed out. Please check your connection and try again.")), 30000);
+    });
+    
+    try {
+      const signUpPromise = createUserWithEmailAndPassword(auth, email, password);
+      await Promise.race([signUpPromise, timeoutPromise]);
+    } catch (error: any) {
+      // Handle network errors specifically
+      if (error?.code === 'auth/network-request-failed') {
+        throw new Error("Network error. Please check your internet connection and ensure Firebase is properly configured. If the problem persists, check your Firebase Auth domain settings.");
+      }
+      throw error;
+    }
   };
 
   const signInWithGoogle = async () => {
