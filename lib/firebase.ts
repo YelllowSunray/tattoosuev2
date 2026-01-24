@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
-import { getAuth } from 'firebase/auth';
+import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Validate required environment variables
@@ -45,3 +45,35 @@ export const storage = getStorage(app);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
+// Safari compatibility and IndexedDB noise suppression
+if (typeof window !== 'undefined') {
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  // Safari's ITP can make IndexedDB/localStorage unreliable; prefer session persistence
+  if (isSafari) {
+    setPersistence(auth, browserSessionPersistence).catch((error) => {
+      console.warn('Failed to set auth persistence (Safari):', error);
+    });
+  }
+
+  // Suppress known Firebase IndexedDB warnings (non-critical)
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    if (
+      (reason?.message?.includes('IndexedDB') && reason?.message?.includes('app/idb-get')) ||
+      reason?.code === 'app/idb-get' ||
+      reason?.name === 'AbortError'
+    ) {
+      event.preventDefault();
+    }
+  });
+
+  const originalError = console.error;
+  console.error = (...args: any[]) => {
+    const message = args[0]?.toString() || '';
+    if (message.includes('IndexedDB') && message.includes('app/idb-get')) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+}

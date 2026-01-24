@@ -59,7 +59,10 @@ export default function AuthModal({
       // Provide more user-friendly error messages
       let errorMessage = "An error occurred";
       if (err.message) {
-        if (err.message.includes("timeout")) {
+        if (err.message.includes("Domain authorization error") || err.message.includes("not authorized")) {
+          const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+          errorMessage = `Domain authorization error: ${currentHost} is not authorized in Firebase. Please add this domain in Firebase Console → Authentication → Settings → Authorized domains.`;
+        } else if (err.message.includes("timeout")) {
           errorMessage = err.message;
         } else if (err.message.includes("Network error") || err.message.includes("network-request-failed")) {
           errorMessage = "Network error. Please check your connection. If this persists, verify Firebase configuration in Vercel environment variables.";
@@ -73,11 +76,17 @@ export default function AuthModal({
           errorMessage = "Please enter a valid email address";
         } else if (err.code === 'auth/network-request-failed') {
           errorMessage = "Network error. Please check your internet connection and Firebase configuration.";
+        } else if (err.code === 'auth/unauthorized-domain') {
+          const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+          errorMessage = `Domain authorization error: ${currentHost} is not authorized. Please add this domain in Firebase Console → Authentication → Settings → Authorized domains.`;
         } else {
           errorMessage = err.message;
         }
       } else if (err.code === 'auth/network-request-failed') {
         errorMessage = "Network error. Please check your internet connection and Firebase configuration.";
+      } else if (err.code === 'auth/unauthorized-domain') {
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'this domain';
+        errorMessage = `Domain authorization error: ${currentHost} is not authorized. Please add this domain in Firebase Console → Authentication → Settings → Authorized domains.`;
       }
       setError(errorMessage);
     } finally {

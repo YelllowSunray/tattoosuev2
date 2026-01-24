@@ -74,12 +74,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Detect Safari for better diagnostics
+    const isSafari = typeof window !== 'undefined' && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    
     // Retry logic for Vercel network issues
     const maxRetries = 2;
     let lastError: any = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        // Log Safari attempts for debugging
+        if (isSafari && attempt === 0) {
+          console.log('Safari sign-in attempt - checking Firebase connectivity...');
+        }
+        
         // Increase timeout to 60 seconds for Vercel
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error("Sign in request timed out. Please check your connection and try again.")), 60000);
@@ -89,9 +97,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await Promise.race([signInPromise, timeoutPromise]);
         
         // Success - return immediately
+        if (isSafari) {
+          console.log('Safari sign-in successful');
+        }
         return;
       } catch (error: any) {
         lastError = error;
+        
+        // Enhanced diagnostic logging
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+        const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+        
+        console.error('🔴 Sign-in Error Details:', {
+          attempt: attempt + 1,
+          code: error?.code,
+          message: error?.message,
+          currentHost,
+          authDomain,
+          isSafari,
+          errorName: error?.name,
+        });
+        
+        // Check for domain authorization errors
+        if (error?.code === 'auth/unauthorized-domain' || 
+            error?.message?.toLowerCase().includes('unauthorized') ||
+            error?.message?.toLowerCase().includes('domain')) {
+          console.error('❌ DOMAIN AUTHORIZATION ERROR DETECTED');
+          console.error('   This domain may not be authorized in Firebase Console.');
+          console.error('   Fix: Firebase Console → Authentication → Settings → Authorized domains');
+          console.error(`   Add: ${currentHost}`);
+          if (currentHost.startsWith('www.')) {
+            console.error(`   Add: ${currentHost.replace('www.', '')}`);
+          } else {
+            console.error(`   Add: www.${currentHost}`);
+          }
+          throw new Error(`Domain authorization error: ${currentHost} is not authorized. Please add this domain in Firebase Console → Authentication → Settings → Authorized domains.`);
+        }
+        
+        // Enhanced logging for Safari
+        if (isSafari) {
+          console.error(`Safari sign-in error (attempt ${attempt + 1}/${maxRetries + 1}):`, {
+            code: error?.code,
+            message: error?.message,
+            name: error?.name,
+            stack: error?.stack?.substring(0, 200) // First 200 chars of stack
+          });
+        }
         
         // Don't retry on authentication errors (wrong password, etc.)
         if (error?.code === 'auth/user-not-found' || 
@@ -106,13 +157,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error?.code === 'auth/network-request-failed' ||
           error?.message?.includes('timeout')
         )) {
+          if (isSafari) {
+            console.log(`Safari: Retrying in ${1000 * (attempt + 1)}ms...`);
+          }
           // Wait before retrying (exponential backoff)
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
           continue;
         }
         
-        // Handle network errors specifically
+        // Handle network errors specifically with Safari-specific guidance
         if (error?.code === 'auth/network-request-failed') {
+          if (isSafari) {
+            throw new Error("Safari blocked the authentication request. This may be due to Safari's privacy settings. Try: Safari → Preferences → Privacy → uncheck 'Prevent cross-site tracking', or clear Safari cache and cookies for this site.");
+          }
           throw new Error("Network error. Please check your internet connection and ensure Firebase is properly configured. If the problem persists, check your Firebase Auth domain settings in Vercel.");
         }
         
@@ -121,10 +178,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     
     // If we get here, all retries failed
+    if (isSafari) {
+      console.error('Safari sign-in failed after all retries:', lastError);
+    }
     throw lastError;
   };
 
   const signUp = async (email: string, password: string) => {
+    const isSafari = typeof window !== "undefined" && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
     // Retry logic for Vercel network issues
     const maxRetries = 2;
     let lastError: any = null;
@@ -143,6 +204,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       } catch (error: any) {
         lastError = error;
+        
+        // Enhanced diagnostic logging
+        const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'unknown';
+        const authDomain = process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+        
+        console.error('🔴 Sign-up Error Details:', {
+          attempt: attempt + 1,
+          code: error?.code,
+          message: error?.message,
+          currentHost,
+          authDomain,
+          errorName: error?.name,
+        });
+        
+        // Check for domain authorization errors
+        if (error?.code === 'auth/unauthorized-domain' || 
+            error?.message?.toLowerCase().includes('unauthorized') ||
+            error?.message?.toLowerCase().includes('domain')) {
+          console.error('❌ DOMAIN AUTHORIZATION ERROR DETECTED');
+          console.error('   This domain may not be authorized in Firebase Console.');
+          console.error('   Fix: Firebase Console → Authentication → Settings → Authorized domains');
+          console.error(`   Add: ${currentHost}`);
+          if (currentHost.startsWith('www.')) {
+            console.error(`   Add: ${currentHost.replace('www.', '')}`);
+          } else {
+            console.error(`   Add: www.${currentHost}`);
+          }
+          throw new Error(`Domain authorization error: ${currentHost} is not authorized. Please add this domain in Firebase Console → Authentication → Settings → Authorized domains.`);
+        }
         
         // Don't retry on validation errors
         if (error?.code === 'auth/email-already-in-use' ||
