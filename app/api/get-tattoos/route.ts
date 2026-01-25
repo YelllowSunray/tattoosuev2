@@ -1,9 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllTattooImages } from "@/lib/firebase-utils";
+import { getAllTattooImages, TattooImageFilters } from "@/lib/firebase-utils";
 
 export async function GET(req: NextRequest) {
   try {
-    const tattoos = await getAllTattooImages();
+    const { searchParams } = new URL(req.url);
+    
+    // Extract filter parameters from query string
+    const filters: TattooImageFilters = {};
+    
+    const bodyPart = searchParams.get('bodyPart');
+    if (bodyPart) {
+      filters.bodyPart = bodyPart;
+    }
+    
+    const categoryId = searchParams.get('categoryId');
+    if (categoryId) {
+      const parsed = parseInt(categoryId, 10);
+      if (!isNaN(parsed)) {
+        filters.categoryId = parsed;
+      }
+    }
+    
+    const styleId = searchParams.get('styleId');
+    if (styleId) {
+      const parsed = parseInt(styleId, 10);
+      if (!isNaN(parsed)) {
+        filters.styleId = parsed;
+      }
+    }
+    
+    const searchQuery = searchParams.get('search');
+    if (searchQuery) {
+      filters.searchQuery = searchQuery;
+    }
+    
+    // Pass filters to getAllTattooImages (filters at filename level before fetching URLs)
+    const tattoos = await getAllTattooImages('/', Object.keys(filters).length > 0 ? filters : undefined);
     
     return NextResponse.json({
       success: true,

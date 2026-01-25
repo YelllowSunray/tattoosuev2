@@ -18,14 +18,8 @@ export default function MobileNav() {
 
       const loadUserMode = async () => {
         if (!user) {
-          // If not authenticated, use localStorage
-          const savedMode = localStorage.getItem("userMode");
-          if (savedMode === "individual" || savedMode === "parlor") {
-            setUserMode(savedMode);
-          } else {
-            setUserMode("individual");
-            localStorage.setItem("userMode", "individual");
-          }
+          // Default to individual mode if not authenticated
+          setUserMode("individual");
           return;
         }
 
@@ -41,28 +35,14 @@ export default function MobileNav() {
             const data = await res.json();
             const mode = data.mode || "individual";
             setUserMode(mode);
-            // Also save to localStorage for offline access
-            localStorage.setItem("userMode", mode);
           } else {
-            // Fallback to localStorage if Firebase fails
-            const savedMode = localStorage.getItem("userMode");
-            if (savedMode === "individual" || savedMode === "parlor") {
-              setUserMode(savedMode);
-            } else {
-              setUserMode("individual");
-              localStorage.setItem("userMode", "individual");
-            }
+            // Default to individual if Firebase fails
+            setUserMode("individual");
           }
         } catch (error) {
           console.error("Error loading user mode:", error);
-          // Fallback to localStorage
-          const savedMode = localStorage.getItem("userMode");
-          if (savedMode === "individual" || savedMode === "parlor") {
-            setUserMode(savedMode);
-          } else {
-            setUserMode("individual");
-            localStorage.setItem("userMode", "individual");
-          }
+          // Default to individual on error
+          setUserMode("individual");
         }
       };
 
@@ -195,7 +175,6 @@ export default function MobileNav() {
                         onClick={async () => {
                           if (userMode !== "individual") {
                             setUserMode("individual");
-                            localStorage.setItem("userMode", "individual");
                             
                             // Save to Firebase
                             if (user) {
@@ -229,7 +208,6 @@ export default function MobileNav() {
                         onClick={async () => {
                           if (userMode !== "parlor") {
                             setUserMode("parlor");
-                            localStorage.setItem("userMode", "parlor");
                             
                             // Save to Firebase
                             if (user) {

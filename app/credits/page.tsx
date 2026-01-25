@@ -18,25 +18,42 @@ export default function CreditsPage() {
   const { user, loading: authLoading } = useAuth();
   const [userMode, setUserMode] = useState("individual");
 
-  // Load user mode from localStorage
-  useEffect(() => {
-    const savedMode = localStorage.getItem("userMode");
-    if (savedMode === "individual" || savedMode === "parlor") {
-      setUserMode(savedMode);
-    }
-  }, []);
   const [creditsData, setCreditsData] = useState<CreditsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const previousCreditsRef = useRef<number>(0);
 
-  // Load user mode from localStorage
+  // Load user mode from Firebase
   useEffect(() => {
-    const savedMode = localStorage.getItem("userMode");
-    if (savedMode === "individual" || savedMode === "parlor") {
-      setUserMode(savedMode);
+    async function loadUserMode() {
+      if (!user) {
+        setUserMode("individual");
+        return;
+      }
+
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/mode", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const mode = data.mode || "individual";
+          setUserMode(mode);
+        } else {
+          setUserMode("individual");
+        }
+      } catch (error) {
+        console.error("Error loading user mode:", error);
+        setUserMode("individual");
+      }
     }
-  }, []);
+    
+    loadUserMode();
+  }, [user]);
 
   const fetchCredits = useCallback(async (showLoading = false) => {
     if (!user) {

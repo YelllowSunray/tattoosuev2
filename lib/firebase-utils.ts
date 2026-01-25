@@ -13,12 +13,24 @@ export interface TattooImage {
   duration?: number; // Duration in minutes
 }
 
+export interface TattooImageFilters {
+  bodyPart?: string;
+  categoryId?: number;
+  styleId?: number;
+  searchQuery?: string;
+}
+
 /**
- * Fetches all tattoo images from Firebase Storage
+ * Fetches tattoo images from Firebase Storage with optional filtering
+ * Filters are applied at the filename level before fetching download URLs for better performance
  * @param folderPath - Optional folder path in Firebase Storage (default: '/')
+ * @param filters - Optional filters to apply before fetching URLs
  * Note: If images are in a subfolder, specify it like 'tattoos/' or 'images/'
  */
-export async function getAllTattooImages(folderPath: string = '/'): Promise<TattooImage[]> {
+export async function getAllTattooImages(
+  folderPath: string = '/',
+  filters?: TattooImageFilters
+): Promise<TattooImage[]> {
   try {
     // Try root path first, then common folder names
     const pathsToTry = folderPath !== '/' ? [folderPath] : ['/', 'tattoos/', 'images/', 'designs/'];
@@ -32,7 +44,59 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
         if (result.items.length > 0) {
           console.log(`Found ${result.items.length} images in Firebase Storage at path: ${normalizedPath}`);
           
-          const imagePromises: Promise<TattooImage | null>[] = result.items.map(async (itemRef) => {
+          // Filter items by filename BEFORE fetching URLs (much faster)
+          let itemsToProcess = result.items;
+          
+          if (filters) {
+            itemsToProcess = result.items.filter((itemRef) => {
+              const fileName = itemRef.name.toLowerCase();
+              
+              // Filter by bodyPart (filename format: style_bodypart.png)
+              if (filters.bodyPart) {
+                const bodyPartLower = filters.bodyPart.toLowerCase();
+                const bodyPartPattern = `_${bodyPartLower}.`;
+                if (!fileName.includes(bodyPartPattern)) {
+                  return false;
+                }
+              }
+              
+              // For categoryId/styleId/searchQuery, we need to parse the filename
+              // But we can do a quick check first to avoid unnecessary parsing
+              if (filters.categoryId || filters.styleId || filters.searchQuery) {
+                const [style] = itemRef.name.split('_');
+                const styleLower = style?.toLowerCase() || '';
+                
+                // Quick search query check on filename
+                if (filters.searchQuery) {
+                  const query = filters.searchQuery.toLowerCase();
+                  if (!fileName.includes(query) && !styleLower.includes(query)) {
+                    return false;
+                  }
+                }
+                
+                // For categoryId/styleId, we need to match the style
+                // This is a bit more expensive, but still better than fetching URLs
+                if (filters.categoryId || filters.styleId) {
+                  const match = matchStyleToCategory(style || '');
+                  
+                  if (filters.categoryId && match?.category.id !== filters.categoryId) {
+                    return false;
+                  }
+                  
+                  if (filters.styleId && match?.style.id !== filters.styleId) {
+                    return false;
+                  }
+                }
+              }
+              
+              return true;
+            });
+          }
+          
+          console.log(`Filtered to ${itemsToProcess.length} images matching filters`);
+          
+          // Only fetch URLs for filtered items
+          const imagePromises: Promise<TattooImage | null>[] = itemsToProcess.map(async (itemRef) => {
             try {
               const url = await getDownloadURL(itemRef);
               const fileName = itemRef.name;
@@ -52,6 +116,24 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
                 category: match?.category,
                 matchedStyle: match?.style,
               };
+              
+              // Final search query check (more thorough, includes category/style names)
+              if (filters?.searchQuery) {
+                const query = filters.searchQuery.toLowerCase().trim();
+                const styleName = image.matchedStyle?.name?.toLowerCase() || image.style?.toLowerCase() || "";
+                const categoryName = image.category?.name?.toLowerCase() || "";
+                const bodyPartName = image.bodyPart?.toLowerCase() || "";
+                
+                const matchesSearch = 
+                  styleName.includes(query) ||
+                  categoryName.includes(query) ||
+                  bodyPartName.includes(query) ||
+                  fileName.toLowerCase().includes(query);
+                
+                if (!matchesSearch) {
+                  return null; // Filter out this image
+                }
+              }
               
               return image;
             } catch (error) {
@@ -102,6 +184,55 @@ export async function getAllTattooImages(folderPath: string = '/'): Promise<Tatt
       `);
     }
     
+    return [];
+  }
+}
+
+/**
+ * Gets unique body parts from filenames without fetching download URLs
+ * Much faster than fetching all images - only parses filenames
+ */
+export async function getBodyPartsList(folderPath: string = '/'): Promise<string[]> {
+  try {
+    const pathsToTry = folderPath !== '/' ? [folderPath] : ['/', 'tattoos/', 'images/', 'designs/'];
+    
+    for (const path of pathsToTry) {
+      try {
+        const normalizedPath = path === '/' ? '/' : path.endsWith('/') ? path : `${path}/`;
+        const imagesRef = ref(storage, normalizedPath);
+        const result = await listAll(imagesRef);
+        
+        if (result.items.length > 0) {
+          // Parse filenames to extract body parts (no URL fetching needed - much faster)
+          const bodyParts = new Set<string>();
+          
+          result.items.forEach((itemRef) => {
+            const fileName = itemRef.name;
+            // Parse filename: style_bodypart.png
+            const [, bodyPartWithExt] = fileName.split('_');
+            if (bodyPartWithExt) {
+              const bodyPart = bodyPartWithExt.replace(/\.(png|jpg|jpeg|webp)$/i, '');
+              if (bodyPart) {
+                bodyParts.add(bodyPart);
+              }
+            }
+          });
+          
+          return Array.from(bodyParts).sort();
+        }
+      } catch (pathError: any) {
+        // If this path fails, try the next one
+        if (pathError?.code === 'storage/unauthorized' || pathError?.code === 'storage/object-not-found') {
+          continue;
+        }
+        throw pathError;
+      }
+    }
+    
+    // If we get here, no path worked
+    return [];
+  } catch (error) {
+    console.error('Error fetching body parts list:', error);
     return [];
   }
 }

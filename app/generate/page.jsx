@@ -263,18 +263,12 @@ export default function GeneratePage() {
     fetchUserCredits();
   }, [user]);
 
-  // Load user mode from Firebase (with localStorage fallback)
+  // Load user mode from Firebase (no localStorage fallback)
   useEffect(() => {
     async function loadUserMode() {
       if (!user) {
-        // If not authenticated, use localStorage
-        const savedMode = localStorage.getItem("userMode");
-        if (savedMode === "individual" || savedMode === "parlor") {
-          setUserMode(savedMode);
-        } else {
-          setUserMode("individual");
-          localStorage.setItem("userMode", "individual");
-        }
+        // Default to individual mode if not authenticated
+        setUserMode("individual");
         return;
       }
 
@@ -290,28 +284,14 @@ export default function GeneratePage() {
           const data = await res.json();
           const mode = data.mode || "individual";
           setUserMode(mode);
-          // Also save to localStorage for offline access
-          localStorage.setItem("userMode", mode);
         } else {
-          // Fallback to localStorage if Firebase fails
-          const savedMode = localStorage.getItem("userMode");
-          if (savedMode === "individual" || savedMode === "parlor") {
-            setUserMode(savedMode);
-          } else {
-            setUserMode("individual");
-            localStorage.setItem("userMode", "individual");
-          }
+          // Default to individual if Firebase fails
+          setUserMode("individual");
         }
       } catch (error) {
         console.error("Error loading user mode:", error);
-        // Fallback to localStorage
-        const savedMode = localStorage.getItem("userMode");
-        if (savedMode === "individual" || savedMode === "parlor") {
-          setUserMode(savedMode);
-        } else {
-          setUserMode("individual");
-          localStorage.setItem("userMode", "individual");
-        }
+        // Default to individual on error
+        setUserMode("individual");
       }
     }
     
@@ -356,8 +336,10 @@ export default function GeneratePage() {
     fetchCustomerName();
   }, [user, selectedCustomerId, isForMe]);
 
-  // Function to save form state to localStorage
-  const saveFormState = useCallback(() => {
+  // Function to save form state to Firebase
+  const saveFormState = useCallback(async () => {
+    if (!user) return; // Only save if user is authenticated
+    
     try {
       const formState = {
         prompt,
@@ -385,9 +367,18 @@ export default function GeneratePage() {
         })),
         referenceImageType,
       };
-      localStorage.setItem("generateFormState", JSON.stringify(formState));
+      
+      const token = await user.getIdToken();
+      await fetch("/api/users/form-state", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ formState }),
+      });
     } catch (error) {
-      console.error("Error saving form state:", error);
+      console.error("Error saving form state to Firebase:", error);
     }
   }, [
     prompt,
@@ -414,116 +405,98 @@ export default function GeneratePage() {
   // Auto-save form state whenever form fields change
   useEffect(() => {
     // Don't save on initial mount or if form was just reset
-    if (formWasReset) {
+    if (formWasReset || !user) {
       return;
     }
     
-    // Debounce saves to avoid too many localStorage writes
+    // Debounce saves to avoid too many Firebase writes
     const timeoutId = setTimeout(() => {
       saveFormState();
-    }, 300);
+    }, 1000); // Increased debounce for Firebase (1 second)
     
     return () => clearTimeout(timeoutId);
-  }, [saveFormState, formWasReset]);
+  }, [saveFormState, formWasReset, user]);
 
   // Restore form state on page load (when navigating back from any page)
   useEffect(() => {
-    const savedState = localStorage.getItem("generateFormState");
-    if (savedState) {
+    async function loadFormState() {
+      if (!user) return; // Only load if user is authenticated
+      
       try {
-        const formState = JSON.parse(savedState);
-        if (formState.prompt) setPrompt(formState.prompt);
-        if (formState.selectedModel) setSelectedModel(formState.selectedModel);
-        if (formState.selectedCategoryId !== undefined) setSelectedCategoryId(formState.selectedCategoryId);
-        if (formState.selectedStyleIds) setSelectedStyleIds(formState.selectedStyleIds);
-        if (formState.selectedPlacements) setSelectedPlacements(formState.selectedPlacements);
-        if (formState.customPlacement) setCustomPlacement(formState.customPlacement);
-        if (formState.showCustomPlacement) setShowCustomPlacement(formState.showCustomPlacement);
-        if (formState.selectedColor) setSelectedColor(formState.selectedColor);
-        if (formState.monochromaticColor) setMonochromaticColor(formState.monochromaticColor);
-        if (formState.customColor) setCustomColor(formState.customColor);
-        if (formState.showCustomColor) setShowCustomColor(formState.showCustomColor);
-        if (formState.selectedSkinColor) setSelectedSkinColor(formState.selectedSkinColor);
-        if (formState.selectedSize !== undefined) setSelectedSize(formState.selectedSize);
-        if (formState.customSize !== undefined) setCustomSize(formState.customSize);
-        if (formState.numberOfImages) setNumberOfImages(formState.numberOfImages);
-        if (formState.selectedCustomerId !== undefined) setSelectedCustomerId(formState.selectedCustomerId);
-        if (formState.isForMe !== undefined) setIsForMe(formState.isForMe);
-        if (formState.referenceImageType) setReferenceImageType(formState.referenceImageType);
-        // Note: referenceImages base64 data is not restored (too large for localStorage)
-        
-        // After restoring form state, load favorites from Firebase and merge them
-        // This ensures favorites selected on favorite-styles page are added to selected styles
-        if (user) {
-          async function loadAndMergeFavorites() {
-            try {
-              const token = await user.getIdToken();
-              const res = await fetch("/api/users/favorite-styles", {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              });
-              
-              if (res.ok) {
-                const data = await res.json();
-                const favoriteIds = data.favoriteStyleIds || [];
-                if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
-                  // Merge favorites with restored form state styles
-                  setSelectedStyleIds((prev) => {
-                    const combined = [...prev];
-                    favoriteIds.forEach((id) => {
-                      if (!combined.includes(id)) {
-                        combined.push(id);
-                      }
-                    });
-                    return combined;
-                  });
-                }
-              }
-            } catch (e) {
-              console.error("Error loading favorites after form restore:", e);
-            }
-          }
-          
-          loadAndMergeFavorites();
-        }
-        
-        // Don't clear saved state - keep it persistent for navigation
-      } catch (e) {
-        console.error("Error restoring form state:", e);
-      }
-    } else {
-      // No saved form state means this is a fresh page load (refresh)
-      // Clear favorites from Firebase so "Find Favorite Styles" starts fresh
-      if (user) {
-        async function clearFavoritesOnRefresh() {
-          try {
-            const token = await user.getIdToken();
-            await fetch("/api/users/favorite-styles", {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-              },
-              body: JSON.stringify({ favoriteStyleIds: [] }),
-            });
-            // Clear sessionStorage flag
-            const sessionKey = `favoritesLoaded_${user.uid}`;
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem(sessionKey);
-            }
-          } catch (e) {
-            console.error("Error clearing favorites on refresh:", e);
-          }
-        }
-        
-        // Fire and forget - don't await to avoid blocking page load
-        clearFavoritesOnRefresh().catch((e) => {
-          console.error("Error clearing favorites on refresh:", e);
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/form-state", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const formState = data.formState;
+          
+          if (formState) {
+            if (formState.prompt) setPrompt(formState.prompt);
+            if (formState.selectedModel) setSelectedModel(formState.selectedModel);
+            if (formState.selectedCategoryId !== undefined) setSelectedCategoryId(formState.selectedCategoryId);
+            if (formState.selectedStyleIds) setSelectedStyleIds(formState.selectedStyleIds);
+            if (formState.selectedPlacements) setSelectedPlacements(formState.selectedPlacements);
+            if (formState.customPlacement) setCustomPlacement(formState.customPlacement);
+            if (formState.showCustomPlacement) setShowCustomPlacement(formState.showCustomPlacement);
+            if (formState.selectedColor) setSelectedColor(formState.selectedColor);
+            if (formState.monochromaticColor) setMonochromaticColor(formState.monochromaticColor);
+            if (formState.customColor) setCustomColor(formState.customColor);
+            if (formState.showCustomColor) setShowCustomColor(formState.showCustomColor);
+            if (formState.selectedSkinColor) setSelectedSkinColor(formState.selectedSkinColor);
+            if (formState.selectedSize !== undefined) setSelectedSize(formState.selectedSize);
+            if (formState.customSize !== undefined) setCustomSize(formState.customSize);
+            if (formState.numberOfImages) setNumberOfImages(formState.numberOfImages);
+            if (formState.selectedCustomerId !== undefined) setSelectedCustomerId(formState.selectedCustomerId);
+            if (formState.isForMe !== undefined) setIsForMe(formState.isForMe);
+            if (formState.referenceImageType) setReferenceImageType(formState.referenceImageType);
+            // Note: referenceImages base64 data is not restored (too large)
+            
+            // After restoring form state, load favorites from Firebase and merge them
+            // This ensures favorites selected on favorite-styles page are added to selected styles
+            async function loadAndMergeFavorites() {
+              try {
+                const token = await user.getIdToken();
+                const res = await fetch("/api/users/favorite-styles", {
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                });
+                
+                if (res.ok) {
+                  const data = await res.json();
+                  const favoriteIds = data.favoriteStyleIds || [];
+                  if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+                    // Merge favorites with restored form state styles
+                    setSelectedStyleIds((prev) => {
+                      const combined = [...prev];
+                      favoriteIds.forEach((id) => {
+                        if (!combined.includes(id)) {
+                          combined.push(id);
+                        }
+                      });
+                      return combined;
+                    });
+                  }
+                }
+              } catch (e) {
+                console.error("Error loading favorites after form restore:", e);
+              }
+            }
+            
+            loadAndMergeFavorites();
+          }
+        }
+      } catch (e) {
+        console.error("Error loading form state from Firebase:", e);
       }
     }
-  }, [user]); // Depend on user so we can load favorites after form restore
+    
+    loadFormState();
+  }, [user]);
 
   // Load favorite styles from Firebase (only once per session when user is authenticated)
   useEffect(() => {
@@ -1177,8 +1150,20 @@ export default function GeneratePage() {
     setStencils(null);
     setResultText("");
     setShowPurchaseCredits(false);
-    // Clear localStorage form state
-    localStorage.removeItem("generateFormState");
+    // Clear Firebase form state
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await fetch("/api/users/form-state", {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      } catch (error) {
+        console.error("Error clearing form state:", error);
+      }
+    }
     // Mark that form was reset - this prevents favorites from auto-loading
     setFormWasReset(true);
     
@@ -1209,6 +1194,16 @@ export default function GeneratePage() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-3 sm:px-4 py-6 sm:py-10">
       <div className="w-full max-w-3xl border border-white/10 bg-black/70 p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
         <div className="space-y-4">
+          {/* Back to Gallery button - top left, always visible */}
+          <div className="flex items-start">
+            <Link
+              href="/"
+              className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center transition-colors"
+            >
+              ← Back to Gallery
+            </Link>
+          </div>
+          
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="hidden sm:flex items-center gap-2 flex-wrap">
               {user && (
@@ -1244,7 +1239,6 @@ export default function GeneratePage() {
                     onClick={async () => {
                       if (userMode !== "individual") {
                         setUserMode("individual");
-                        localStorage.setItem("userMode", "individual");
                         setIsForMe(true);
                         setSelectedCustomerId(null);
                         
@@ -1280,7 +1274,6 @@ export default function GeneratePage() {
                     onClick={async () => {
                       if (userMode !== "parlor") {
                         setUserMode("parlor");
-                        localStorage.setItem("userMode", "parlor");
                         // Reset customer field when switching to parlor mode
                         setIsForMe(false);
                         setSelectedCustomerId(null);
@@ -1337,7 +1330,6 @@ export default function GeneratePage() {
                     onClick={async () => {
                       if (userMode !== "individual") {
                         setUserMode("individual");
-                        localStorage.setItem("userMode", "individual");
                         setIsForMe(true);
                         setSelectedCustomerId(null);
 
@@ -1373,7 +1365,6 @@ export default function GeneratePage() {
                     onClick={async () => {
                       if (userMode !== "parlor") {
                         setUserMode("parlor");
-                        localStorage.setItem("userMode", "parlor");
                         // Reset customer field when switching to parlor mode
                         setIsForMe(false);
                         setSelectedCustomerId(null);

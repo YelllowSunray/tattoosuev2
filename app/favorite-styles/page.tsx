@@ -9,9 +9,6 @@ import CreditsDisplay from "../components/CreditsDisplay";
 import TattooGallery from "../components/TattooGallery";
 import TattooFilter from "../components/TattooFilter";
 import {
-  getAllTattooImages,
-  getUniqueBodyParts,
-  filterTattoos,
   TattooImage,
 } from "@/lib/firebase-utils";
 import { getStyleById } from "@/lib/tattoo-categories";
@@ -29,37 +26,57 @@ function FavoriteStylesContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [favoriteStyleIds, setFavoriteStyleIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
-  const [visibleCount, setVisibleCount] = useState(200);
+  const [visibleCount, setVisibleCount] = useState(100);
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-  // Check localStorage for placement from generate page and set default
+  // Check Firebase for placement from generate page and set default
   useEffect(() => {
-    const savedState = localStorage.getItem("generateFormState");
-    if (savedState) {
+    async function loadFormState() {
+      if (!user) {
+        setSelectedBodyPart("chest");
+        return;
+      }
+      
       try {
-        const formState = JSON.parse(savedState);
-        // If "Other" was selected (showCustomPlacement is true), default to "chest"
-        if (formState.showCustomPlacement) {
-          setSelectedBodyPart("chest");
-        } 
-        // If a placement was selected, use the first one (convert to lowercase)
-        else if (formState.selectedPlacements && formState.selectedPlacements.length > 0) {
-          const placement = formState.selectedPlacements[0].toLowerCase();
-          setSelectedBodyPart(placement);
-        }
-        // If no placement was selected, default to "chest"
-        else {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/users/form-state", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          const formState = data.formState;
+          
+          if (formState) {
+            // If "Other" was selected (showCustomPlacement is true), default to "chest"
+            if (formState.showCustomPlacement) {
+              setSelectedBodyPart("chest");
+            } 
+            // If a placement was selected, use the first one (convert to lowercase)
+            else if (formState.selectedPlacements && formState.selectedPlacements.length > 0) {
+              const placement = formState.selectedPlacements[0].toLowerCase();
+              setSelectedBodyPart(placement);
+            }
+            // If no placement was selected, default to "chest"
+            else {
+              setSelectedBodyPart("chest");
+            }
+          } else {
+            setSelectedBodyPart("chest");
+          }
+        } else {
           setSelectedBodyPart("chest");
         }
       } catch (e) {
-        console.error("Error parsing form state:", e);
-        // Default to chest if parsing fails
+        console.error("Error loading form state:", e);
         setSelectedBodyPart("chest");
       }
-    } else {
-      // No saved state, default to chest
-      setSelectedBodyPart("chest");
     }
-  }, []);
+    
+    loadFormState();
+  }, [user]);
 
   // Load favorite styles from Firebase
   useEffect(() => {
@@ -126,27 +143,69 @@ function FavoriteStylesContent() {
     return () => clearTimeout(timeoutId);
   }, [favoriteStyleIds, user]);
 
-  // Load tattoo data
+  // Load body parts list and initial images on mount
   useEffect(() => {
-    async function loadData() {
+    async function loadInitialData() {
       try {
         setLoading(true);
-        const [images, uniqueBodyParts] = await Promise.all([
-          getAllTattooImages(),
-          getUniqueBodyParts(),
+        
+        // Fetch in parallel for maximum speed:
+        // 1. Body parts list (just filenames, no URLs - very fast)
+        // 2. Filtered images (chest) with URLs (only what we need to display - much faster than all images)
+        const [bodyPartsResponse, tattoosResponse] = await Promise.all([
+          fetch('/api/get-body-parts'),
+          fetch('/api/get-tattoos?bodyPart=chest'), // Only fetch chest images with URLs
         ]);
+        
+        // Handle body parts (fast - no URL fetching)
+        if (bodyPartsResponse.ok) {
+          const bodyPartsData = await bodyPartsResponse.json();
+          if (bodyPartsData.success) {
+            setBodyParts(bodyPartsData.bodyParts);
+          }
+        }
+        
+        // Handle filtered images (only chest images, not all images)
+        if (!tattoosResponse.ok) {
+          throw new Error(`Failed to fetch tattoos: ${tattoosResponse.statusText}`);
+        }
 
+        const tattoosData = await tattoosResponse.json();
+        
+        if (!tattoosData.success) {
+          throw new Error(tattoosData.error || 'Failed to fetch tattoos');
+        }
+
+        // Transform API response to match TattooImage format
+        const images: TattooImage[] = tattoosData.tattoos.map((t: any) => ({
+          url: t.url,
+          style: t.style || '',
+          bodyPart: t.bodyPart || '',
+          fileName: t.fileName,
+          category: t.category ? {
+            id: t.category.id,
+            name: t.category.name,
+            styles: [],
+          } : undefined,
+          matchedStyle: t.matchedStyle ? {
+            id: t.matchedStyle.id,
+            name: t.matchedStyle.name,
+            keywords: [],
+          } : undefined,
+        }));
+
+        // Load prices.json and merge with images
         try {
-          const pricesResponse = await fetch("/prices.json");
+          const pricesResponse = await fetch('/prices.json');
           if (pricesResponse.ok) {
-            const pricesData: Array<{ fileName: string; price: number; duration: number }> =
-              await pricesResponse.json();
+            const pricesData: Array<{ fileName: string; price: number; duration: number }> = await pricesResponse.json();
             const pricesMap = new Map<string, { price: number; duration: number }>();
-            pricesData.forEach((item) => {
+            pricesData.forEach(item => {
               pricesMap.set(item.fileName, { price: item.price, duration: item.duration });
             });
 
-            const imagesWithPrices = images.map((image) => ({
+            // Merge price and duration data with images
+            const imagesWithPrices = images.map(image => ({
               ...image,
               price: pricesMap.get(image.fileName)?.price,
               duration: pricesMap.get(image.fileName)?.duration,
@@ -155,36 +214,119 @@ function FavoriteStylesContent() {
             setAllImages(imagesWithPrices);
             setFilteredImages(imagesWithPrices);
           } else {
+            // If prices.json doesn't exist or fails to load, use images without prices
             setAllImages(images);
             setFilteredImages(images);
           }
         } catch (pricesError) {
           console.error("Error loading prices:", pricesError);
+          // Continue with images without prices
           setAllImages(images);
           setFilteredImages(images);
         }
-
-        setBodyParts(uniqueBodyParts);
+        
+        setFiltersInitialized(true);
       } catch (error) {
-        console.error("Error loading tattoo data:", error);
+        console.error("Error loading initial tattoo data:", error);
+        // Set empty arrays to show error state instead of infinite loading
+        setAllImages([]);
+        setFilteredImages([]);
+        setBodyParts([]);
       } finally {
         setLoading(false);
       }
     }
-    loadData();
-  }, []);
+    loadInitialData();
+  }, []); // Only run once on mount
 
+  // Load filtered tattoo data when filters change (after initial load)
   useEffect(() => {
-    const filtered = filterTattoos(
-      allImages,
-      selectedCategoryId,
-      selectedStyleId,
-      selectedBodyPart,
-      searchQuery
-    );
-    setFilteredImages(filtered);
-    setVisibleCount(200);
-  }, [allImages, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
+    // Skip if filters haven't been initialized yet (initial load handles it)
+    if (!filtersInitialized) return;
+    
+    async function loadFilteredData() {
+      try {
+        setLoading(true);
+        
+        // Build query parameters from current filters
+        const params = new URLSearchParams();
+        if (selectedBodyPart) params.set('bodyPart', selectedBodyPart);
+        if (selectedCategoryId) params.set('categoryId', selectedCategoryId.toString());
+        if (selectedStyleId) params.set('styleId', selectedStyleId.toString());
+        if (searchQuery) params.set('search', searchQuery);
+        
+        // Fetch filtered images from API (server-side filtering = faster)
+        const tattoosResponse = await fetch(`/api/get-tattoos?${params.toString()}`);
+        
+        if (!tattoosResponse.ok) {
+          throw new Error(`Failed to fetch tattoos: ${tattoosResponse.statusText}`);
+        }
+
+        const tattoosData = await tattoosResponse.json();
+        
+        if (!tattoosData.success) {
+          throw new Error(tattoosData.error || 'Failed to fetch tattoos');
+        }
+
+        // Transform API response to match TattooImage format
+        const images: TattooImage[] = tattoosData.tattoos.map((t: any) => ({
+          url: t.url,
+          style: t.style || '',
+          bodyPart: t.bodyPart || '',
+          fileName: t.fileName,
+          category: t.category ? {
+            id: t.category.id,
+            name: t.category.name,
+            styles: [],
+          } : undefined,
+          matchedStyle: t.matchedStyle ? {
+            id: t.matchedStyle.id,
+            name: t.matchedStyle.name,
+            keywords: [],
+          } : undefined,
+        }));
+
+        // Load prices.json and merge with images
+        try {
+          const pricesResponse = await fetch('/prices.json');
+          if (pricesResponse.ok) {
+            const pricesData: Array<{ fileName: string; price: number; duration: number }> = await pricesResponse.json();
+            const pricesMap = new Map<string, { price: number; duration: number }>();
+            pricesData.forEach(item => {
+              pricesMap.set(item.fileName, { price: item.price, duration: item.duration });
+            });
+
+            // Merge price and duration data with images
+            const imagesWithPrices = images.map(image => ({
+              ...image,
+              price: pricesMap.get(image.fileName)?.price,
+              duration: pricesMap.get(image.fileName)?.duration,
+            }));
+
+            setAllImages(imagesWithPrices);
+            setFilteredImages(imagesWithPrices);
+          } else {
+            // If prices.json doesn't exist or fails to load, use images without prices
+            setAllImages(images);
+            setFilteredImages(images);
+          }
+        } catch (pricesError) {
+          console.error("Error loading prices:", pricesError);
+          // Continue with images without prices
+          setAllImages(images);
+          setFilteredImages(images);
+        }
+      } catch (error) {
+        console.error("Error loading filtered tattoo data:", error);
+        // Set empty arrays to show error state instead of infinite loading
+        setAllImages([]);
+        setFilteredImages([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadFilteredData();
+  }, [filtersInitialized, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
 
   const handleStyleClick = (styleId: number) => {
     setFavoriteStyleIds((prev) => {
@@ -202,9 +344,23 @@ function FavoriteStylesContent() {
     });
   };
 
-  const handleComplete = () => {
-    // Save favorite styles to localStorage
-    localStorage.setItem("favoriteStyleIds", JSON.stringify(favoriteStyleIds));
+  const handleComplete = async () => {
+    // Save favorite styles to Firebase
+    if (user) {
+      try {
+        const token = await user.getIdToken();
+        await fetch("/api/users/favorite-styles", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ favoriteStyleIds }),
+        });
+      } catch (error) {
+        console.error("Error saving favorite styles:", error);
+      }
+    }
     // Navigate back to generate page
     router.push("/generate");
   };

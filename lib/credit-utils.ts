@@ -13,7 +13,7 @@ export interface UserCredits {
   updatedAt: Date;
 }
 
-const INITIAL_CREDITS = 4;
+const INITIAL_CREDITS = 0;
 
 /**
  * Get user's current credit balance
@@ -25,7 +25,7 @@ export async function getUserCredits(userId: string): Promise<number> {
   if (!userDoc.exists) {
     // Initialize user with starting credits
     await initializeUserCredits(userId);
-    return INITIAL_CREDITS;
+    return 0;
   }
   
   const data = userDoc.data();

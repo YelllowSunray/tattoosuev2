@@ -279,16 +279,16 @@ export default function HistoryPage() {
   };
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+      if (authLoading) return;
+      
+      if (!user) {
+          setLoading(false);
+        return;
+      }
 
     async function loadData() {
       if (!user) return;
-      
+
       try {
         setLoading(true);
         
@@ -385,31 +385,31 @@ export default function HistoryPage() {
             <div className="sm:hidden">
               <MobileNav />
             </div>
-            <div>
+          <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-light tracking-tight">
-                Previously Generated Tattoos
-              </h1>
+              Previously Generated Tattoos
+            </h1>
               <p className="text-xs sm:text-sm text-white/60 hidden sm:block">
-                {user 
-                  ? "Your previously generated tattoos"
-                  : "Sign in to view your generated tattoos"}
-              </p>
-            </div>
+              {user 
+                ? "Your previously generated tattoos"
+                : "Sign in to view your generated tattoos"}
+            </p>
+          </div>
           </div>
           <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
             <div className="hidden lg:flex gap-2 items-center">
-              <Link
-                href="/"
+            <Link
+              href="/"
                 className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center justify-center"
-              >
-                ← Back to gallery
-              </Link>
-              <Link
-                href="/generate"
+            >
+              ← Back to gallery
+            </Link>
+            <Link
+              href="/generate"
                 className="text-xs sm:text-sm text-black bg-white border border-white/30 px-3 py-2 rounded-full hover:bg-zinc-200 min-h-[44px] flex items-center justify-center"
-              >
-                Generate more
-              </Link>
+            >
+              Generate more
+            </Link>
               <CreditsDisplay />
               <Link
                 href="/credits"
@@ -417,7 +417,7 @@ export default function HistoryPage() {
               >
                 Credits
               </Link>
-              <AuthButton />
+            <AuthButton />
             </div>
           </div>
         </div>
@@ -516,7 +516,7 @@ export default function HistoryPage() {
                         className="border border-white/15 bg-black/60 p-2 relative group"
                       >
                         <div className="flex items-center justify-center min-h-[200px]">
-                          <img
+                <img
                             src={displayUrl}
                             alt={`Generation ${idx + 1}${isShowingStencil ? " (Stencil)" : ""}`}
                             className="w-full h-auto object-contain max-h-96"

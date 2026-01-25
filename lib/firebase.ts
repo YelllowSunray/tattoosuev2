@@ -45,30 +45,18 @@ export const storage = getStorage(app);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// IndexedDB noise suppression
-// Note: Removed Safari-specific browserSessionPersistence override because:
-// 1. Previous version worked on custom domains without it
-// 2. browserSessionPersistence can cause issues on custom domains
-// 3. Firebase's default persistence (browserLocalPersistence) works fine
+// Suppress Firebase IndexedDB warnings (non-critical errors)
+// These occur when IndexedDB is unavailable or corrupted, but Firebase will fall back to memory
 if (typeof window !== 'undefined') {
-  // Suppress known Firebase IndexedDB warnings (non-critical)
-  window.addEventListener('unhandledrejection', (event) => {
-    const reason = event.reason;
-    if (
-      (reason?.message?.includes('IndexedDB') && reason?.message?.includes('app/idb-get')) ||
-      reason?.code === 'app/idb-get' ||
-      reason?.name === 'AbortError'
-    ) {
-      event.preventDefault();
-    }
-  });
-
   const originalError = console.error;
   console.error = (...args: any[]) => {
+    // Filter out non-critical Firebase IndexedDB warnings
     const message = args[0]?.toString() || '';
     if (message.includes('IndexedDB') && message.includes('app/idb-get')) {
+      // Suppress this specific warning as it's non-critical
       return;
     }
     originalError.apply(console, args);
   };
 }
+
