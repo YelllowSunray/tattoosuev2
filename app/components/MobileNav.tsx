@@ -163,6 +163,13 @@ export default function MobileNav() {
                       </div>
                     </div>
                   )}
+                  <Link
+                    href="/support"
+                    onClick={() => setIsOpen(false)}
+                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                  >
+                    Contact Support
+                  </Link>
                 </nav>
 
                 {/* Mode Toggle */}

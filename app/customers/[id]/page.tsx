@@ -57,6 +57,7 @@ export default function CustomerDetailPage() {
   const [saving, setSaving] = useState(false);
   const [generationsToShow, setGenerationsToShow] = useState(5); // Initial number of generations to show
   const [loadingMore, setLoadingMore] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<{ generationId: string; imageIndex: number } | null>(null);
   const { user, loading: authLoading } = useAuth();
 
   // Helper function to load image URLs for specific generations
@@ -266,6 +267,39 @@ export default function CustomerDetailPage() {
       setSaving(false);
     }
   };
+
+  // Handle keyboard navigation for image modal
+  useEffect(() => {
+    if (!selectedImage) return;
+    
+    const generation = generations.find(g => g.id === selectedImage.generationId);
+    if (!generation) return;
+    
+    const totalImages = generation.images.length;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSelectedImage(null);
+      } else if (e.key === "ArrowLeft" && totalImages > 1) {
+        e.preventDefault();
+        const prevIndex = selectedImage.imageIndex > 0 
+          ? selectedImage.imageIndex - 1 
+          : totalImages - 1;
+        setSelectedImage({ ...selectedImage, imageIndex: prevIndex });
+      } else if (e.key === "ArrowRight" && totalImages > 1) {
+        e.preventDefault();
+        const nextIndex = selectedImage.imageIndex < totalImages - 1 
+          ? selectedImage.imageIndex + 1 
+          : 0;
+        setSelectedImage({ ...selectedImage, imageIndex: nextIndex });
+      }
+    };
+    
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedImage, generations]);
 
   const handleGenerateStencil = async (generation: Generation, imageIdx: number, imageUrl: string) => {
     if (!user) return;
@@ -729,7 +763,8 @@ export default function CustomerDetailPage() {
                       return (
                         <div
                           key={idx}
-                          className="border border-white/15 bg-black/60 p-2 relative group"
+                          className="border border-white/15 bg-black/60 p-2 relative group cursor-pointer"
+                          onClick={() => setSelectedImage({ generationId: generation.id, imageIndex: idx })}
                         >
                           <div className="flex items-center justify-center min-h-[200px]">
                             <img
@@ -748,7 +783,8 @@ export default function CustomerDetailPage() {
                           </div>
                           {stencilUrl ? (
                             <button
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent opening modal when clicking stencil toggle
                                 setShowStencil((prev) => ({
                                   ...prev,
                                   [toggleKey]: !prev[toggleKey],
@@ -767,7 +803,10 @@ export default function CustomerDetailPage() {
                                 </div>
                               )}
                               <button
-                                onClick={() => handleGenerateStencil(generation, idx, url)}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Prevent opening modal when clicking generate stencil
+                                  handleGenerateStencil(generation, idx, url);
+                                }}
                                 disabled={generatingStencil[toggleKey]}
                                 className="px-3 py-2 text-xs bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] flex items-center justify-center"
                                 title="Generate stencil for this image"
@@ -798,6 +837,109 @@ export default function CustomerDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Image Modal */}
+        {selectedImage && (() => {
+          const generation = generations.find(g => g.id === selectedImage.generationId);
+          if (!generation) return null;
+          
+          const imagePath = generation.images[selectedImage.imageIndex];
+          const url = imageUrlMap[imagePath];
+          const stencilPath = generation.stencils?.[selectedImage.imageIndex];
+          const stencilUrl = stencilPath ? (stencilUrlMap[stencilPath] || null) : null;
+          const toggleKey = `${generation.id}-${selectedImage.imageIndex}`;
+          const isShowingStencil = showStencil[toggleKey] || false;
+          const displayUrl = isShowingStencil && stencilUrl ? stencilUrl : url;
+          const totalImages = generation.images.length;
+          
+          return (
+            <div
+              className="fixed inset-0 z-[9997] flex items-center justify-center p-4 sm:p-6 bg-black/95 backdrop-blur-sm"
+              onClick={() => setSelectedImage(null)}
+            >
+              <div
+                className="max-w-6xl w-full max-h-[90vh] overflow-y-auto relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="bg-black border border-white/10 p-4 sm:p-8 md:p-12">
+                  {/* Close button */}
+                  <button
+                    onClick={() => setSelectedImage(null)}
+                    className="absolute top-4 right-4 sm:top-6 sm:right-6 text-white/40 hover:text-white/80 text-3xl font-light w-10 h-10 flex items-center justify-center transition-colors z-10 min-h-[44px] min-w-[44px]"
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+
+                  {/* Main image */}
+                  <div className="mb-6">
+                    <div className="relative aspect-square max-w-2xl mx-auto border border-white/10">
+                      <img
+                        src={displayUrl}
+                        alt={`Generation ${selectedImage.imageIndex + 1}${isShowingStencil ? " (Stencil)" : ""}`}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div className="mt-6 text-center">
+                      <h3 className="text-2xl sm:text-3xl md:text-4xl font-light text-white mb-2 tracking-tight">
+                        {generation.prompt}
+                      </h3>
+                      <p className="text-white/60 text-sm">
+                        Image {selectedImage.imageIndex + 1} of {totalImages} • {generation.model}
+                      </p>
+                      {stencilUrl && (
+                        <button
+                          onClick={() => {
+                            setShowStencil((prev) => ({
+                              ...prev,
+                              [toggleKey]: !prev[toggleKey],
+                            }));
+                          }}
+                          className="mt-4 px-4 py-2 text-sm bg-black/80 border border-white/30 text-white hover:bg-black hover:border-white/50 rounded transition-colors min-h-[44px]"
+                        >
+                          {isShowingStencil ? "Show Original" : "Show Stencil"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Navigation arrows */}
+                  {totalImages > 1 && (
+                    <div className="flex items-center justify-between mt-6">
+                      <button
+                        onClick={() => {
+                          const prevIndex = selectedImage.imageIndex > 0 
+                            ? selectedImage.imageIndex - 1 
+                            : totalImages - 1;
+                          setSelectedImage({ ...selectedImage, imageIndex: prevIndex });
+                        }}
+                        className="px-4 py-2 text-white/70 hover:text-white border border-white/30 hover:border-white/50 transition-colors min-h-[44px]"
+                        aria-label="Previous image"
+                      >
+                        ← Previous
+                      </button>
+                      <span className="text-white/50 text-sm">
+                        {selectedImage.imageIndex + 1} / {totalImages}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const nextIndex = selectedImage.imageIndex < totalImages - 1 
+                            ? selectedImage.imageIndex + 1 
+                            : 0;
+                          setSelectedImage({ ...selectedImage, imageIndex: nextIndex });
+                        }}
+                        className="px-4 py-2 text-white/70 hover:text-white border border-white/30 hover:border-white/50 transition-colors min-h-[44px]"
+                        aria-label="Next image"
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

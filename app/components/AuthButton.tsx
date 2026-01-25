@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthModal from "./AuthModal";
 
@@ -48,6 +49,12 @@ export default function AuthButton() {
           >
             Sign Out
           </button>
+          <Link
+            href="/support"
+            className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+          >
+            Support
+          </Link>
         </div>
       </>
     );
@@ -55,12 +62,20 @@ export default function AuthButton() {
 
   return (
     <>
-      <button
-        onClick={() => setShowModal(true)}
-        className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-      >
-        Sign In
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowModal(true)}
+          className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+        >
+          Sign In
+        </button>
+        <Link
+          href="/support"
+          className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+        >
+          Support
+        </Link>
+      </div>
       <AuthModal isOpen={showModal} onClose={() => setShowModal(false)} />
     </>
   );

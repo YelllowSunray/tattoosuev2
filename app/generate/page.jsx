@@ -1209,12 +1209,6 @@ export default function GeneratePage() {
               {user && (
                 <>
                   <Link
-                    href="/"
-                    className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
-                  >
-                    ← Back to gallery
-                  </Link>
-                  <Link
                     href="/history"
                     className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full min-h-[44px] flex items-center"
                   >
