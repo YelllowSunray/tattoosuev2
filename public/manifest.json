@@ -1,7 +1,7 @@
 {
-  "name": "Sue's Tattoo Studio",
+  "name": "Sue's AI Tattoo Generator",
   "short_name": "Sue's Tattoo",
-  "description": "Discover beautiful tattoo designs. Browse hundreds of tattoo styles and find your perfect tattoo inspiration.",
+  "description": "AI tattoo design generator. Create custom tattoo designs instantly, visualize on your body, and explore 100+ styles. Most affordable at $0.20 per image.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

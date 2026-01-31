@@ -272,7 +272,7 @@ export default function Home() {
     "@type": "WebSite",
     name: siteName,
     url: siteUrl,
-    description: "Discover beautiful tattoo designs. Browse hundreds of tattoo styles including mandala, realism, traditional, and more.",
+    description: "AI tattoo design generator. Create custom tattoo designs instantly, visualize on your body, and explore 100+ styles. The most affordable AI tattoo generator.",
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -288,8 +288,8 @@ export default function Home() {
     "@type": "Organization",
     name: siteName,
     url: siteUrl,
-    logo: `${siteUrl}/logo.png`, // Update with your logo URL
-    description: "Professional tattoo design gallery featuring hundreds of tattoo styles and placements.",
+    logo: `${siteUrl}/logo.png`,
+    description: "AI-powered tattoo design generator. Create custom tattoos, visualize on your body, and choose from 100+ styles at the most affordable price.",
     sameAs: [
       // Add your social media links here when available
       // "https://www.instagram.com/yourhandle",
@@ -370,16 +370,6 @@ export default function Home() {
             <div className="lg:hidden flex-shrink-0">
               <MobileNav />
             </div>
-          </div>
-          <div className="text-center space-y-1 flex-shrink-0">
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-light tracking-tight">
-              <span className="bg-gradient-to-r from-white via-white/90 to-white/80 bg-clip-text text-transparent">
-                Sue&apos;s Tattoo
-              </span>
-            </h1>
-            <p className="text-white/50 text-[10px] sm:text-xs md:text-sm font-light tracking-wide uppercase letter-spacing-wider hidden sm:block">
-              Discover Your Perfect Design
-            </p>
           </div>
           <div className="flex-1 flex justify-end">
             <div className="hidden lg:flex items-center gap-2">
@@ -546,7 +536,7 @@ export default function Home() {
         {/* Main Hero */}
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light tracking-tight text-white mb-4 sm:mb-6">
-            AI Tattoo Design Generator
+            Sue&apos;s AI Tattoo Design Generator
           </h2>
           <p className="text-white/60 text-sm sm:text-base md:text-lg font-light max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
             The most affordable AI tattoo generator on the market. Create custom tattoo designs 
