@@ -23,7 +23,6 @@ function FavoriteStylesContent() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedStyleId, setSelectedStyleId] = useState<number | undefined>();
   const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>();
-  const [searchQuery, setSearchQuery] = useState("");
   const [favoriteStyleIds, setFavoriteStyleIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(100);
@@ -253,7 +252,6 @@ function FavoriteStylesContent() {
         if (selectedBodyPart) params.set('bodyPart', selectedBodyPart);
         if (selectedCategoryId) params.set('categoryId', selectedCategoryId.toString());
         if (selectedStyleId) params.set('styleId', selectedStyleId.toString());
-        if (searchQuery) params.set('search', searchQuery);
         
         // Fetch filtered images from API (server-side filtering = faster)
         const tattoosResponse = await fetch(`/api/get-tattoos?${params.toString()}`);
@@ -326,7 +324,7 @@ function FavoriteStylesContent() {
       }
     }
     loadFilteredData();
-  }, [filtersInitialized, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
+  }, [filtersInitialized, selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
   const handleStyleClick = (styleId: number) => {
     setFavoriteStyleIds((prev) => {
@@ -415,16 +413,13 @@ function FavoriteStylesContent() {
                 selectedCategoryId={selectedCategoryId}
                 selectedStyleId={selectedStyleId}
                 selectedBodyPart={selectedBodyPart}
-                searchQuery={searchQuery}
                 onCategoryChange={setSelectedCategoryId}
                 onStyleChange={setSelectedStyleId}
                 onBodyPartChange={setSelectedBodyPart}
-                onSearchChange={setSearchQuery}
                 onClearAll={() => {
                   setSelectedCategoryId(undefined);
                   setSelectedStyleId(undefined);
                   setSelectedBodyPart(undefined);
-                  setSearchQuery("");
                 }}
               />
             )}
