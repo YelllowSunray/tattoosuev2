@@ -59,4 +59,3 @@ if (typeof window !== 'undefined') {
     originalError.apply(console, args);
   };
 }
-

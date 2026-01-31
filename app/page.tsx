@@ -22,7 +22,6 @@ export default function Home() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedStyleId, setSelectedStyleId] = useState<number | undefined>();
   const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>("chest");
-  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [showFiltersMobile, setShowFiltersMobile] = useState(false);
   const [visibleCount, setVisibleCount] = useState(200);
@@ -189,7 +188,6 @@ export default function Home() {
         if (selectedBodyPart) params.set('bodyPart', selectedBodyPart);
         if (selectedCategoryId) params.set('categoryId', selectedCategoryId.toString());
         if (selectedStyleId) params.set('styleId', selectedStyleId.toString());
-        if (searchQuery) params.set('search', searchQuery);
         
         // Fetch filtered images from API (server-side filtering = faster)
         const tattoosResponse = await fetch(`/api/get-tattoos?${params.toString()}`);
@@ -262,7 +260,7 @@ export default function Home() {
       }
     }
     loadFilteredData();
-  }, [filtersInitialized, selectedCategoryId, selectedStyleId, selectedBodyPart, searchQuery]);
+  }, [filtersInitialized, selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sujathascompass.com';
   const siteName = "Sue's Tattoo Studio";
@@ -542,8 +540,50 @@ export default function Home() {
         </div>
       </header>
 
+      {/* Hero Section - Static content for SEO (renders immediately, no API needed) */}
+      <section className="relative border-b border-white/5 bg-gradient-to-b from-black via-black/95 to-black">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light tracking-tight text-white mb-4 sm:mb-6">
+            AI Tattoo Design Generator
+          </h2>
+          <p className="text-white/60 text-sm sm:text-base md:text-lg font-light max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
+            Create custom tattoo designs instantly with AI. Browse hundreds of styles including 
+            mandala, realism, traditional, geometric, and more. Generate your own unique design 
+            in seconds or explore our curated gallery for inspiration.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+            <Link
+              href="/generate"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 text-sm sm:text-base font-medium text-black bg-white hover:bg-zinc-200 transition-colors"
+            >
+              Generate Your Design
+            </Link>
+            <a
+              href="#gallery"
+              className="w-full sm:w-auto px-6 sm:px-8 py-3 text-sm sm:text-base font-medium text-white border border-white/30 hover:border-white/50 hover:bg-white/5 transition-colors"
+            >
+              Browse Gallery
+            </a>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-white/40 text-xs sm:text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🎨</span>
+              <span>100+ Tattoo Styles</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚡</span>
+              <span>Instant AI Generation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📍</span>
+              <span>Any Body Placement</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Main Content */}
-      <main className="relative flex">
+      <main id="gallery" className="relative flex">
         {/* Sidebar */}
         <aside className="hidden lg:block w-80 border-r border-white/5 bg-black/40 backdrop-blur-sm sticky top-[73px] h-[calc(100vh-73px)] overflow-y-auto">
           <div className="p-6">
@@ -554,16 +594,13 @@ export default function Home() {
                 selectedCategoryId={selectedCategoryId}
                 selectedStyleId={selectedStyleId}
                 selectedBodyPart={selectedBodyPart}
-                searchQuery={searchQuery}
                 onCategoryChange={setSelectedCategoryId}
                 onStyleChange={setSelectedStyleId}
                 onBodyPartChange={setSelectedBodyPart}
-                onSearchChange={setSearchQuery}
                 onClearAll={() => {
                   setSelectedCategoryId(undefined);
                   setSelectedStyleId(undefined);
                   setSelectedBodyPart(undefined);
-                  setSearchQuery("");
                 }}
               />
             )}
@@ -602,13 +639,12 @@ export default function Home() {
                 >
                   Filters
                 </button>
-                {(selectedCategoryId || selectedStyleId || selectedBodyPart || searchQuery) && (
+                {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
                   <button
                     onClick={() => {
                       setSelectedCategoryId(undefined);
                       setSelectedStyleId(undefined);
                       setSelectedBodyPart(undefined);
-                      setSearchQuery("");
                     }}
                     className="text-xs text-white/60 hover:text-white transition-colors font-light uppercase tracking-wider"
                   >
@@ -712,16 +748,13 @@ export default function Home() {
               selectedCategoryId={selectedCategoryId}
               selectedStyleId={selectedStyleId}
               selectedBodyPart={selectedBodyPart}
-              searchQuery={searchQuery}
               onCategoryChange={setSelectedCategoryId}
               onStyleChange={setSelectedStyleId}
               onBodyPartChange={setSelectedBodyPart}
-              onSearchChange={setSearchQuery}
               onClearAll={() => {
                 setSelectedCategoryId(undefined);
                 setSelectedStyleId(undefined);
                 setSelectedBodyPart(undefined);
-                setSearchQuery("");
               }}
             />
             <div className="flex gap-2">
@@ -730,7 +763,6 @@ export default function Home() {
                   setSelectedCategoryId(undefined);
                   setSelectedStyleId(undefined);
                   setSelectedBodyPart(undefined);
-                  setSearchQuery("");
                 }}
                 className="flex-1 px-4 py-2 text-sm font-medium text-white/80 border border-white/20 hover:border-white/40"
               >
