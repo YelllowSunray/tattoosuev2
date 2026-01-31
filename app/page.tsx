@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import Script from "next/script";
 import TattooFilter from "./components/TattooFilter";
 import TattooGallery from "./components/TattooGallery";
@@ -542,16 +543,16 @@ export default function Home() {
 
       {/* Hero Section - Static content for SEO (renders immediately, no API needed) */}
       <section className="relative border-b border-white/5 bg-gradient-to-b from-black via-black/95 to-black">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
+        {/* Main Hero */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-light tracking-tight text-white mb-4 sm:mb-6">
             AI Tattoo Design Generator
           </h2>
           <p className="text-white/60 text-sm sm:text-base md:text-lg font-light max-w-2xl mx-auto mb-6 sm:mb-8 leading-relaxed">
-            Create custom tattoo designs instantly with AI. Browse hundreds of styles including 
-            mandala, realism, traditional, geometric, and more. Generate your own unique design 
-            in seconds or explore our curated gallery for inspiration.
+            The most affordable AI tattoo generator on the market. Create custom tattoo designs 
+            instantly, visualize them on your actual body, and explore hundreds of styles.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-8 sm:mb-10">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6">
             <Link
               href="/generate"
               className="w-full sm:w-auto px-6 sm:px-8 py-3 text-sm sm:text-base font-medium text-black bg-white hover:bg-zinc-200 transition-colors"
@@ -565,18 +566,193 @@ export default function Home() {
               Browse Gallery
             </a>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-white/40 text-xs sm:text-sm">
+          </div>
+
+        {/* Pricing Highlight - Right below hero */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 text-center">
+          <div className="bg-white/5 border border-white/10 p-6 sm:p-8">
+            <h3 className="text-xl sm:text-2xl font-light text-white mb-3">
+              The Most Affordable AI Tattoo Generator
+            </h3>
+            <p className="text-white/60 text-sm sm:text-base max-w-2xl mx-auto mb-4">
+              At just <span className="text-white font-medium">2 credits ($0.20) per image</span>, 
+              generate dozens of variations and find your perfect design without breaking the bank. 
+              Compare that to $5-15 per image on other platforms.
+            </p>
+            <Link
+              href="/pricing"
+              className="inline-block px-6 py-3 text-sm font-medium text-white border border-white/30 hover:border-white/50 hover:bg-white/5 transition-colors"
+            >
+              View Pricing
+            </Link>
+          </div>
+        </div>
+
+        {/* Feature Sections with Alternating Layout */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+          
+          {/* Feature 1: Visualize On Your Body - Image Right */}
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 py-12 border-t border-white/5">
+            <div className="flex-1 lg:pr-8">
+              <h3 className="text-xl sm:text-2xl font-light text-white mb-4">
+                Visualize Tattoos On Your Actual Body
+              </h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-4">
+                Upload a photo of your arm, chest, back, leg, or any body part and see exactly 
+                how your tattoo design will look on YOUR skin before you commit. No more guessing 
+                or imagining — see the real result.
+              </p>
+              <ul className="text-white/50 text-sm space-y-2">
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Works with any body part photo</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Realistic placement and scaling</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Your photos are never stored</li>
+              </ul>
+            </div>
+            <div className="flex-1 w-full lg:w-auto">
+              <div className="relative aspect-[4/3] border border-white/10 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/6.png"
+                  alt="AI tattoo visualized on actual body - see how your tattoo will look before getting inked"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 2: Create From Photos - Image Left */}
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12 py-12 border-t border-white/5">
+            <div className="flex-1 lg:pl-8">
+              <h3 className="text-xl sm:text-2xl font-light text-white mb-4">
+                Create Tattoos From Your Own Photos
+              </h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-4">
+                Turn photos of loved ones, pets, children, or any meaningful image into beautiful 
+                tattoo designs. Perfect for memorial tattoos, portrait pieces, or transforming 
+                cherished memories into permanent art.
+              </p>
+              <ul className="text-white/50 text-sm space-y-2">
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Family portraits to tattoo art</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Pet photos transformed</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Memorial and tribute designs</li>
+              </ul>
+            </div>
+            <div className="flex-1 w-full lg:w-auto">
+              <div className="relative aspect-[4/3] border border-white/10 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/10.png"
+                  alt="Transform your photos into tattoo designs - family portraits, pets, and meaningful images"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 3: Mix Styles - Image Right */}
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 py-12 border-t border-white/5">
+            <div className="flex-1 lg:pr-8">
+              <h3 className="text-xl sm:text-2xl font-light text-white mb-4">
+                Combine 100+ Styles For Unique Designs
+              </h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-4">
+                Mix mandala with geometric, traditional with watercolor, realism with abstract, 
+                or any combination you can imagine. Our AI understands tattoo styles and lets 
+                you create truly one-of-a-kind designs.
+              </p>
+              <ul className="text-white/50 text-sm space-y-2">
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Mandala, geometric, tribal, traditional</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Realism, watercolor, blackwork, dotwork</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Japanese, American traditional, neo-traditional</li>
+              </ul>
+            </div>
+            <div className="flex-1 w-full lg:w-auto">
+              <div className="relative aspect-[4/3] border border-white/10 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/8.png"
+                  alt="Multiple tattoo styles combined - mandala, geometric, traditional, watercolor and more"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 4: Parlor CRM - Image Left */}
+          <div className="flex flex-col lg:flex-row-reverse items-center gap-8 lg:gap-12 py-12 border-t border-white/5">
+            <div className="flex-1 lg:pl-8">
+              <h3 className="text-xl sm:text-2xl font-light text-white mb-4">
+                Built For Tattoo Parlors & Artists
+              </h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-4">
+                Switch to Parlor Mode and unlock a full CRM system. Manage your customers, 
+                track their design history, organize generated tattoos by client, and streamline 
+                your consultation process.
+              </p>
+              <ul className="text-white/50 text-sm space-y-2">
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Customer management system</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Track designs per client</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Professional workflow tools</li>
+              </ul>
+            </div>
+            <div className="flex-1 w-full lg:w-auto">
+              <div className="relative aspect-[4/3] border border-white/10 overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/11.png"
+                  alt="Tattoo parlor CRM system - manage customers and track design history"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature 5: History - Image Right */}
+          <div className="flex flex-col lg:flex-row items-center gap-8 lg:gap-12 py-12 border-t border-white/5">
+            <div className="flex-1 lg:pr-8">
+              <h3 className="text-xl sm:text-2xl font-light text-white mb-4">
+                Save & Access Your Design History
+              </h3>
+              <p className="text-white/60 text-sm sm:text-base leading-relaxed mb-4">
+                Every design you generate is automatically saved to your personal history. 
+                Come back anytime to view past designs, compare variations, refine your ideas, 
+                or show your tattoo artist exactly what you want.
+              </p>
+              <ul className="text-white/50 text-sm space-y-2">
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Unlimited design history</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Easy to share with your artist</li>
+                <li className="flex items-center gap-2"><span className="text-green-400">✓</span> Compare and refine over time</li>
+              </ul>
+            </div>
+            <div className="flex-1 w-full lg:w-auto">
+              <div className="relative aspect-[4/3] border border-white/10 overflow-hidden bg-black/50 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/12.png"
+                  alt="Design history page - save and access all your generated tattoo designs"
+                  className="max-w-full max-h-full object-contain"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Trust Badges */}
+          <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-white/40 text-xs sm:text-sm border-t border-white/5 pt-8">
             <div className="flex items-center gap-2">
-              <span className="text-lg">🎨</span>
-              <span>100+ Tattoo Styles</span>
+              <span>⚡</span>
+              <span>Instant Generation</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">⚡</span>
-              <span>Instant AI Generation</span>
+              <span>🔒</span>
+              <span>Photos Never Stored</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-lg">📍</span>
-              <span>Any Body Placement</span>
+              <span>🎯</span>
+              <span>Multiple AI Models</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>💳</span>
+              <span>Secure Payments</span>
             </div>
           </div>
         </div>
