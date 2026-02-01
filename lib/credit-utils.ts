@@ -13,7 +13,7 @@ export interface UserCredits {
   updatedAt: Date;
 }
 
-const INITIAL_CREDITS = 0;
+const INITIAL_CREDITS = 4;
 
 /**
  * Get user's current credit balance
