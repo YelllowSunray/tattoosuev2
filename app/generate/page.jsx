@@ -80,7 +80,6 @@ export default function GeneratePage() {
   const [showNumberOfImagesInfo, setShowNumberOfImagesInfo] = useState(false);
   const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [favoritesLoaded, setFavoritesLoaded] = useState(false);
   const [formWasReset, setFormWasReset] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const { user, loading: authLoading } = useAuth();
@@ -418,21 +417,21 @@ export default function GeneratePage() {
     return () => clearTimeout(timeoutId);
   }, [saveFormState, formWasReset, user]);
 
-  // Restore form state on page load (when navigating back from any page)
+  // Restore form state and favorites on page load (when navigating back from any page)
   useEffect(() => {
-    async function loadFormState() {
+    async function loadFormStateAndFavorites() {
       if (!user) return; // Only load if user is authenticated
       
       try {
         const token = await user.getIdToken();
-        const res = await fetch("/api/users/form-state", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        
+        // 1. Load form state
+        const formRes = await fetch("/api/users/form-state", {
+          headers: { Authorization: `Bearer ${token}` },
         });
         
-        if (res.ok) {
-          const data = await res.json();
+        if (formRes.ok) {
+          const data = await formRes.json();
           const formState = data.formState;
           
           if (formState) {
@@ -455,110 +454,36 @@ export default function GeneratePage() {
             if (formState.isForMe !== undefined) setIsForMe(formState.isForMe);
             if (formState.referenceImageType) setReferenceImageType(formState.referenceImageType);
             // Note: referenceImages base64 data is not restored (too large)
-            
-            // After restoring form state, load favorites from Firebase and merge them
-            // This ensures favorites selected on favorite-styles page are added to selected styles
-            async function loadAndMergeFavorites() {
-              try {
-                const token = await user.getIdToken();
-                const res = await fetch("/api/users/favorite-styles", {
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                  },
-                });
-                
-                if (res.ok) {
-                  const data = await res.json();
-                  const favoriteIds = data.favoriteStyleIds || [];
-                  if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
-                    // Merge favorites with restored form state styles
-                    setSelectedStyleIds((prev) => {
-                      const combined = [...prev];
-                      favoriteIds.forEach((id) => {
-                        if (!combined.includes(id)) {
-                          combined.push(id);
-                        }
-                      });
-                      return combined;
-                    });
-                  }
-                }
-              } catch (e) {
-                console.error("Error loading favorites after form restore:", e);
-              }
-            }
-            
-            loadAndMergeFavorites();
           }
         }
-      } catch (e) {
-        console.error("Error loading form state from Firebase:", e);
-      }
-    }
-    
-    loadFormState();
-  }, [user]);
-
-  // Load favorite styles from Firebase (only once per session when user is authenticated)
-  useEffect(() => {
-    // Don't load if:
-    // - Already loaded in this session
-    // - Component state says already loaded
-    // - User is not authenticated
-    // - Auth is still loading
-    // - Form was explicitly reset (user doesn't want favorites)
-    const sessionKey = `favoritesLoaded_${user?.uid || 'anonymous'}`;
-    const alreadyLoadedInSession = typeof window !== 'undefined' && sessionStorage.getItem(sessionKey) === 'true';
-    
-    if (alreadyLoadedInSession || favoritesLoaded || !user || authLoading || formWasReset) {
-      return;
-    }
-
-    // Load favorites silently in the background
-    async function loadFavoriteStyles() {
-      try {
-        const token = await user.getIdToken();
-        const res = await fetch("/api/users/favorite-styles", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
         
-        if (res.ok) {
-          const data = await res.json();
-          const favoriteIds = data.favoriteStyleIds || [];
-          if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
-            // Only add favorites if no styles are currently selected
-            // This prevents overwriting user's current selection
-            setSelectedStyleIds((prev) => {
-              // If user already has styles selected, don't overwrite
-              if (prev.length > 0) {
-                return prev;
-              }
-              // Otherwise, add favorites
-              const combined = [...prev];
-              favoriteIds.forEach((id) => {
-                if (!combined.includes(id)) {
-                  combined.push(id);
-                }
+        // 2. Always load favorites from Firebase and merge into selected styles
+        // This ensures favorites selected on favorite-styles page appear on generate page
+        if (!formWasReset) {
+          const favRes = await fetch("/api/users/favorite-styles", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            const favoriteIds = favData.favoriteStyleIds || [];
+            if (Array.isArray(favoriteIds) && favoriteIds.length > 0) {
+              setSelectedStyleIds((prev) => {
+                const combined = [...prev];
+                favoriteIds.forEach((id) => {
+                  if (!combined.includes(id)) combined.push(id);
+                });
+                return combined;
               });
-              return combined;
-            });
+            }
           }
         }
       } catch (e) {
-        console.error("Error loading favorite styles:", e);
-      } finally {
-        // Mark as loaded in both component state and sessionStorage
-        setFavoritesLoaded(true);
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem(sessionKey, 'true');
-        }
+        console.error("Error loading form state / favorites from Firebase:", e);
       }
     }
     
-    loadFavoriteStyles();
-  }, [user, authLoading, favoritesLoaded, formWasReset]); // Depend on user, authLoading, and formWasReset
+    loadFormStateAndFavorites();
+  }, [user, formWasReset]);
 
   const handleGenerate = async (e) => {
     e.preventDefault();
@@ -1180,11 +1105,6 @@ export default function GeneratePage() {
           },
           body: JSON.stringify({ favoriteStyleIds: [] }),
         });
-        // Clear sessionStorage flag so favorites can be loaded fresh if needed
-        const sessionKey = `favoritesLoaded_${user.uid}`;
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem(sessionKey);
-        }
       } catch (e) {
         console.error("Error clearing favorite styles:", e);
       }
