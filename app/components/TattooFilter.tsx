@@ -30,8 +30,8 @@ export default function TattooFilter({
   const [expandedCategory, setExpandedCategory] = useState<number | null>(selectedCategoryId || null);
   
   const availableCategories = getAvailableCategories(images);
-  const stylesInSelectedCategory = selectedCategoryId 
-    ? getStylesInCategory(images, selectedCategoryId)
+  const stylesInExpandedCategory = expandedCategory
+    ? getStylesInCategory(images, expandedCategory)
     : [];
 
   // Auto-expand category when it's selected (e.g., when clicking style from gallery)
@@ -44,13 +44,22 @@ export default function TattooFilter({
   const toggleCategory = (categoryId: number) => {
     if (expandedCategory === categoryId) {
       setExpandedCategory(null);
-      onCategoryChange(undefined);
-      onStyleChange(undefined);
     } else {
       setExpandedCategory(categoryId);
-      onCategoryChange(categoryId);
-      onStyleChange(undefined);
     }
+  };
+
+  const selectCategory = (categoryId?: number) => {
+    if (categoryId === undefined) {
+      setExpandedCategory(null);
+      onCategoryChange(undefined);
+      onStyleChange(undefined);
+      return;
+    }
+
+    setExpandedCategory(categoryId);
+    onCategoryChange(categoryId);
+    onStyleChange(undefined);
   };
 
   return (
@@ -104,11 +113,7 @@ export default function TattooFilter({
         </label>
         <div className="space-y-1">
           <button
-            onClick={() => {
-              onCategoryChange(undefined);
-              onStyleChange(undefined);
-              setExpandedCategory(null);
-            }}
+            onClick={() => selectCategory(undefined)}
             className={`w-full px-4 py-2 text-sm font-light transition-all duration-200 text-left ${
               !selectedCategoryId
                 ? 'bg-white text-black border border-white/20'
@@ -126,48 +131,64 @@ export default function TattooFilter({
             
             return (
               <div key={category.id} className="border border-white/10">
-                <button
-                  onClick={() => toggleCategory(category.id)}
-                  className={`w-full px-4 py-2.5 text-sm font-light transition-all duration-200 text-left flex items-center justify-between ${
+                <div
+                  className={`flex items-stretch transition-all duration-200 ${
                     isSelected
                       ? 'bg-white/10 text-white'
                       : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
                   }`}
                 >
-                  <span className="flex items-center gap-2">
-                    <span className="text-white/40 text-xs">{isExpanded ? '▼' : '▶'}</span>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(category.id)}
+                    aria-label={isExpanded ? `Collapse ${category.name}` : `Expand ${category.name}`}
+                    className="px-3 py-2.5 text-white/40 hover:text-white/70 shrink-0"
+                  >
+                    {isExpanded ? '▼' : '▶'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => selectCategory(isSelected ? undefined : category.id)}
+                    className="flex-1 px-2 py-2.5 text-sm font-light text-left flex items-center justify-between"
+                  >
                     <span>
                       {category.name}
                       {count > 0 && (
                         <span className="ml-2 text-white/40 text-xs font-normal">({count})</span>
                       )}
                     </span>
-                  </span>
-                </button>
+                  </button>
+                </div>
                 
-                {isExpanded && stylesInSelectedCategory.length > 0 && (
+                {isExpanded && stylesInExpandedCategory.length > 0 && (
                   <div className="bg-black/80 border-t border-white/10 p-3 space-y-1">
                     <button
-                      onClick={() => onStyleChange(undefined)}
+                      onClick={() => {
+                        selectCategory(category.id);
+                        onStyleChange(undefined);
+                      }}
                       className={`w-full px-3 py-1.5 text-xs font-light transition-all duration-200 text-left ${
-                        !selectedStyleId
+                        isSelected && !selectedStyleId
                           ? 'bg-white/15 text-white border-l-2 border-white'
                           : 'bg-white/5 text-white/60 border-l-2 border-transparent hover:bg-white/10 hover:text-white/80'
                       }`}
                     >
-                      All Styles
+                      All Styles in {category.name}
                     </button>
                     <div className="space-y-1">
-                      {stylesInSelectedCategory.map((style) => {
+                      {stylesInExpandedCategory.map((style) => {
                         const styleImages = images.filter(img => img.matchedStyle?.id === style.id);
                         const styleCount = styleImages.length;
                         
                         return (
                           <button
                             key={style.id}
-                            onClick={() => onStyleChange(style.id === selectedStyleId ? undefined : style.id)}
+                            onClick={() => {
+                              selectCategory(category.id);
+                              onStyleChange(style.id === selectedStyleId ? undefined : style.id);
+                            }}
                             className={`w-full px-3 py-1.5 text-xs font-light transition-all duration-200 text-left ${
-                              selectedStyleId === style.id
+                              selectedStyleId === style.id && selectedCategoryId === category.id
                                 ? 'bg-white text-black border-l-2 border-white'
                                 : 'bg-white/5 text-white/60 border-l-2 border-transparent hover:bg-white/10 hover:text-white/80'
                             }`}
