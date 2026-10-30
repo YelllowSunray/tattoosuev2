@@ -19,11 +19,6 @@ const sizeStyles = {
     mark: "h-11 w-11 sm:h-12 sm:w-12 text-xs sm:text-sm",
     name: "text-lg sm:text-2xl",
   },
-  hero: {
-    logo: "h-16 w-16 sm:h-20 sm:w-20",
-    mark: "h-16 w-16 sm:h-20 sm:w-20 text-base sm:text-lg",
-    name: "text-2xl sm:text-4xl",
-  },
 } as const;
 
 function studioInitials(name: string): string {
@@ -49,7 +44,6 @@ export default function StudioWordmark({
   const [logoFailed, setLogoFailed] = useState(false);
   const showLogo = Boolean(studio.logoUrl) && !logoFailed;
   const styles = sizeStyles[size];
-  const isHero = size === "hero";
 
   return (
     <span className={`flex items-center gap-3 sm:gap-4 min-w-0 ${className}`}>
@@ -75,9 +69,7 @@ export default function StudioWordmark({
         </span>
       )}
       <span
-        className={`min-w-0 truncate font-light tracking-[0.04em] text-white ${styles.name} ${
-          isHero ? "leading-tight" : ""
-        }`}
+        className={`min-w-0 truncate font-light tracking-[0.04em] text-white ${styles.name}`}
       >
         <span className="hidden sm:inline">{studio.studioName}</span>
         <span className="sm:hidden">{studio.studioNameShort}</span>

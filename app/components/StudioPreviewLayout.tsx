@@ -48,22 +48,6 @@ export default function StudioPreviewLayout({
           </header>
         </div>
 
-        <section className="border-b border-white/[0.06]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 sm:py-6">
-            <StudioWordmark size="hero" className="mb-3 sm:mb-4" />
-            <p className="text-[10px] sm:text-[11px] uppercase tracking-[0.28em] text-white/35 mb-1">
-              Style explorer
-            </p>
-            <h1 className="text-sm sm:text-base font-light tracking-tight text-white/55">
-              Garden of Tattoo Styles
-            </h1>
-            <p className="mt-1.5 text-xs sm:text-sm text-white/40 font-light max-w-xl leading-relaxed">
-              Sample and combine styles, then book a consultation with the
-              studio.
-            </p>
-          </div>
-        </section>
-
         <main>
           <GardenOfTattooStyles
             showHeader={false}
