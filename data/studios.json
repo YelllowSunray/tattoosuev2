@@ -11,5 +11,31 @@
     "plan": "demo",
     "createdAt": "2026-10-30T17:00:00.000Z",
     "trialEndsAt": "2026-11-13T17:00:00.000Z"
+  },
+  {
+    "slug": "trance-tattoo",
+    "name": "Trance Tattoo",
+    "nameShort": "Trance",
+    "logoUrl": "/studios/trance-tattoo/logo.jpg",
+    "accent": "#C4B48A",
+    "accentForeground": "#37322A",
+    "highlight": "#C4B48A",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-10-30T19:40:28.513Z",
+    "trialEndsAt": "2026-11-13T19:40:28.513Z"
+  },
+  {
+    "slug": "the-narrative",
+    "name": "The Narrative Tattoo",
+    "nameShort": "The Narrative",
+    "logoUrl": "/studios/the-narrative/logo.jpg",
+    "accent": "#4D90BC",
+    "accentForeground": "#07141C",
+    "highlight": "#4D90BC",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-10-30T19:40:28.639Z",
+    "trialEndsAt": "2026-11-13T19:40:28.639Z"
   }
 ]
