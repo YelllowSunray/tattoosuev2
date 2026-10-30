@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import { studioConfig } from "@/lib/studio-config";
 
 export const metadata: Metadata = {
-  title: "Gallery",
-  description: studioConfig.description,
-  keywords: studioConfig.keywords,
+  title: "Style explorer for tattoo studios",
+  description:
+    "Style explorer for tattoo studios, branded for your studio. The full style catalogue is available on a studio preview.",
   openGraph: {
-    title: `${studioConfig.studioName} Gallery`,
-    description: studioConfig.description,
+    title: "Style explorer for tattoo studios",
+    description:
+      "Style explorer for tattoo studios, branded for your studio.",
     type: "website",
   },
+  robots: { index: true, follow: true },
 };
 
 export default function GalleryLayout({

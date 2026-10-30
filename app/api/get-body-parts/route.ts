@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBodyPartsList } from "@/lib/firebase-utils";
+import {
+  catalogDeniedResponse,
+  hasTattooCatalogAccess,
+} from "@/lib/catalog-access";
 
 export async function GET(req: NextRequest) {
+  if (!hasTattooCatalogAccess(req)) {
+    return catalogDeniedResponse();
+  }
+
   try {
     const bodyParts = await getBodyPartsList();
     

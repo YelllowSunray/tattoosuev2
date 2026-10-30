@@ -6,21 +6,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const generatorEnabled = isAiGeneratorEnabled();
 
   const routes: MetadataRoute.Sitemap = [
-    ...(generatorEnabled
-      ? [
-          {
-            url: baseUrl,
-            lastModified: new Date(),
-            changeFrequency: "daily" as const,
-            priority: 1,
-          },
-        ]
-      : []),
+    {
+      url: baseUrl,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 1,
+    },
     {
       url: `${baseUrl}/gallery`,
       lastModified: new Date(),
-      changeFrequency: "daily",
-      priority: generatorEnabled ? 0.8 : 1,
+      changeFrequency: "weekly",
+      priority: 0.8,
     },
     {
       url: `${baseUrl}/privacy`,
