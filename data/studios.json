@@ -7,7 +7,6 @@
     "accent": "#e8c547",
     "accentForeground": "#111111",
     "highlight": "#e8c547",
-    "bookingLink": "mailto:hello@inkandiron.example?subject=Book%20a%20consultation",
     "bookingLabel": "Book a consultation",
     "plan": "demo",
     "createdAt": "2026-10-30T17:00:00.000Z",

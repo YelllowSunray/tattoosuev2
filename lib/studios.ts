@@ -13,7 +13,11 @@ export interface StudioRecord {
   accent?: string;
   accentForeground?: string;
   highlight?: string;
-  bookingLink: string;
+  /**
+   * Optional override. When omitted, Book opens Samir's WhatsApp with a
+   * prefilled consultation message for this studio.
+   */
+  bookingLink?: string;
   bookingLabel?: string;
   contactEmail?: string;
   /** demo = 14-day preview with banner; paid = lifetime, set by scripts/activate-studio. */
@@ -30,6 +34,14 @@ export const SAMIRDEV = {
     "mailto:iyersamir@gmail.com?subject=Activate%20gallery%20preview",
   contactLabel: "Contact SamirDev to activate",
 };
+
+/** Default consultation number when a studio has not set its own booking URL. */
+export const DEFAULT_WHATSAPP_NUMBER = "31687343078";
+
+export function whatsappBookingLink(studioName: string): string {
+  const text = `Hi! I'd like to book a consultation at ${studioName}.`;
+  return `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+}
 
 export const studios: StudioRecord[] = studiosJson as StudioRecord[];
 
@@ -51,11 +63,12 @@ export function isDemoPreview(studio: StudioRecord): boolean {
 
 export function studioRecordToConfig(studio: StudioRecord): StudioConfig {
   const accent = studio.accent || "#ffffff";
+  const bookingLink = studio.bookingLink?.trim() || whatsappBookingLink(studio.name);
   return {
     ...studioConfig,
     studioName: studio.name,
     studioNameShort: studio.nameShort || studio.name,
-    bookingLink: studio.bookingLink,
+    bookingLink,
     bookingLabel: studio.bookingLabel || "Book a consultation",
     contactEmail: studio.contactEmail,
     logoUrl: studio.logoUrl || "",

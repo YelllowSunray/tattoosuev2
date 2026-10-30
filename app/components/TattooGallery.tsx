@@ -8,6 +8,7 @@ interface TattooGalleryProps {
   images: TattooImage[];
   allImages: TattooImage[];
   showPriceDuration?: boolean;
+  compactCards?: boolean;
   onStyleClick?: (styleId: number) => void;
   onCategoryClick?: (categoryId: number) => void;
   onBodyPartClick?: (bodyPart: string) => void;
@@ -98,6 +99,7 @@ export default function TattooGallery({
   images,
   allImages,
   showPriceDuration = true,
+  compactCards = false,
   onStyleClick,
   favoriteStyleIds = [],
   onImageClick,
@@ -130,7 +132,13 @@ export default function TattooGallery({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div
+        className={
+          compactCards
+            ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3"
+            : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+        }
+      >
         {images.map((image) => {
           const isFavorited =
             image.matchedStyle &&
@@ -152,16 +160,25 @@ export default function TattooGallery({
                 loading="lazy"
                 quality={85}
                 className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                sizes={
+                  compactCards
+                    ? "(max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                    : "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                }
                 placeholder="blur"
                 blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWEREiMxUf/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
               />
               <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/35 to-transparent pointer-events-none" />
-              <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 pointer-events-auto">
+              <div
+                className={`absolute bottom-0 left-0 right-0 pointer-events-auto ${
+                  compactCards ? "p-2 sm:p-3" : "p-3 sm:p-4"
+                }`}
+              >
                 <StyleCaption
                   image={image}
                   onStyleClick={onStyleClick}
                   showPriceDuration={showPriceDuration}
+                  compact={compactCards}
                 />
               </div>
               {isFavorited && (

@@ -53,6 +53,14 @@ interface GardenOfTattooStylesProps {
   showHeader?: boolean;
   stickyTopClass?: string;
   sidebarHeightClass?: string;
+  /** Studio preview: floating filters, no price chrome, tighter mobile grid. */
+  mode?: "default" | "studio";
+}
+
+function galleryGridClass(studio: boolean) {
+  return studio
+    ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 sm:gap-3"
+    : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4";
 }
 
 export default function GardenOfTattooStyles({
@@ -60,6 +68,7 @@ export default function GardenOfTattooStyles({
   showHeader = true,
   stickyTopClass = "top-[73px]",
   sidebarHeightClass = "h-[calc(100vh-73px)]",
+  mode = "default",
 }: GardenOfTattooStylesProps) {
   const [bodyParts, setBodyParts] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
@@ -76,7 +85,8 @@ export default function GardenOfTattooStyles({
   const [draftStyleId, setDraftStyleId] = useState<number | undefined>();
   const [draftBodyPart, setDraftBodyPart] = useState<string | undefined>();
   const [visibleCount, setVisibleCount] = useState(200);
-  const [showPriceDuration, setShowPriceDuration] = useState(true);
+  const [showPriceDuration, setShowPriceDuration] = useState(mode !== "studio");
+  const isStudio = mode === "studio";
 
   useEffect(() => {
     if (showFiltersMobile) {
@@ -155,6 +165,7 @@ export default function GardenOfTattooStyles({
   );
 
   useEffect(() => {
+    if (isStudio) return;
     async function loadPrices() {
       try {
         const pricesResponse = await fetch("/prices.json");
@@ -182,7 +193,7 @@ export default function GardenOfTattooStyles({
     }
 
     loadPrices();
-  }, []);
+  }, [isStudio]);
 
   useEffect(() => {
     async function loadInitialData() {
@@ -300,6 +311,10 @@ export default function GardenOfTattooStyles({
     () => filterTattoos(draftImages, draftCategoryId, draftStyleId).length,
     [draftImages, draftCategoryId, draftStyleId]
   );
+  const activeFilterCount =
+    Number(Boolean(selectedCategoryId)) +
+    Number(Boolean(selectedStyleId)) +
+    Number(Boolean(selectedBodyPart));
 
   useEffect(() => {
     if (!showFiltersMobile) return;
@@ -350,7 +365,13 @@ export default function GardenOfTattooStyles({
           </div>
         </aside>
 
-        <div className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-10 w-full">
+        <div
+          className={
+            isStudio
+              ? "flex-1 max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-12 pt-2.5 sm:pt-6 lg:pt-8 pb-28 lg:pb-10 w-full"
+              : "flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 sm:py-8 lg:py-10 w-full"
+          }
+        >
           {initialLoading ? (
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
@@ -359,7 +380,7 @@ export default function GardenOfTattooStyles({
               </div>
             </div>
           ) : isPlacementLoading && allImages.length === 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className={galleryGridClass(isStudio)}>
               {Array.from({ length: 8 }).map((_, i) => (
                 <div
                   key={i}
@@ -384,27 +405,30 @@ export default function GardenOfTattooStyles({
             </div>
           ) : (
             <>
-              <div className="mb-6 flex items-center justify-between lg:hidden">
-                <button
-                  type="button"
-                  onClick={openMobileFilters}
-                  aria-expanded={showFiltersMobile}
-                  aria-controls="mobile-filters"
-                  className="px-4 py-3 text-sm font-medium text-black bg-white border border-white/20 min-h-[44px] min-w-[100px]"
-                >
-                  Filters
-                </button>
-                {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
+              {!isStudio && (
+                <div className="mb-6 flex items-center justify-between lg:hidden">
                   <button
-                    onClick={handleClearAllFilters}
-                    className="text-xs text-white/60 hover:text-white transition-colors font-light uppercase tracking-wider"
+                    type="button"
+                    onClick={openMobileFilters}
+                    aria-expanded={showFiltersMobile}
+                    aria-controls="mobile-filters"
+                    className="px-4 py-3 text-sm font-medium text-black bg-white border border-white/20 min-h-[44px] min-w-[100px]"
                   >
-                    Clear
+                    Filters
                   </button>
-                )}
-              </div>
+                  {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
+                    <button
+                      onClick={handleClearAllFilters}
+                      className="text-xs text-white/60 hover:text-white transition-colors font-light uppercase tracking-wider"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              )}
 
-              {(selectedCategoryId || selectedStyleId || selectedBodyPart) && (
+              {!isStudio &&
+                (selectedCategoryId || selectedStyleId || selectedBodyPart) && (
                 <div className="mb-6 flex flex-wrap items-center gap-2">
                   {selectedBodyPart && (
                     <button
@@ -439,28 +463,31 @@ export default function GardenOfTattooStyles({
                 </div>
               )}
 
-              <div className="mb-6 flex items-center justify-between">
-                <p className="text-white/40 text-sm font-light">
-                  <span className="text-white/60 font-normal">{filteredImages.length}</span>{" "}
-                  {filteredImages.length === 1 ? "design" : "designs"}
-                </p>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-white/40 font-light uppercase tracking-wider">
-                    Show Price/Duration
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={showPriceDuration}
-                    onChange={(e) => setShowPriceDuration(e.target.checked)}
-                    className="w-4 h-4 accent-white cursor-pointer"
-                  />
-                </label>
-              </div>
+              {!isStudio && (
+                <div className="mb-6 flex items-center justify-between">
+                  <p className="text-white/40 text-sm font-light">
+                    <span className="text-white/60 font-normal">{filteredImages.length}</span>{" "}
+                    {filteredImages.length === 1 ? "design" : "designs"}
+                  </p>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <span className="text-xs text-white/40 font-light uppercase tracking-wider">
+                      Show Price/Duration
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={showPriceDuration}
+                      onChange={(e) => setShowPriceDuration(e.target.checked)}
+                      className="w-4 h-4 accent-white cursor-pointer"
+                    />
+                  </label>
+                </div>
+              )}
 
               <TattooGallery
                 images={filteredImages.slice(0, visibleCount)}
                 allImages={allImages}
-                showPriceDuration={showPriceDuration}
+                showPriceDuration={!isStudio && showPriceDuration}
+                compactCards={isStudio}
                 onStyleClick={(styleId) => {
                   const newStyleId = selectedStyleId === styleId ? undefined : styleId;
                   setSelectedStyleId(newStyleId);
@@ -491,6 +518,47 @@ export default function GardenOfTattooStyles({
           )}
         </div>
       </div>
+
+      {isStudio && !initialLoading && !showFiltersMobile && (
+        <button
+          type="button"
+          onClick={openMobileFilters}
+          aria-expanded={showFiltersMobile}
+          aria-controls="mobile-filters"
+          aria-label={
+            activeFilterCount > 0
+              ? `Filters, ${activeFilterCount} active`
+              : "Filters"
+          }
+          className="lg:hidden fixed z-40 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 rounded-full px-5 min-h-[48px] text-sm font-semibold shadow-[0_10px_32px_rgba(0,0,0,0.55)] touch-manipulation"
+          style={{
+            bottom: "max(1.25rem, env(safe-area-inset-bottom))",
+            backgroundColor: "var(--studio-accent, #ffffff)",
+            color: "var(--studio-accent-foreground, #000000)",
+          }}
+        >
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3 6h18M6 12h12M10 18h4"
+            />
+          </svg>
+          Filters
+          {activeFilterCount > 0 && (
+            <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-black/20 text-[11px] font-semibold leading-none inline-flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {showFiltersMobile && !initialLoading && (
         <div

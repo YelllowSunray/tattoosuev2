@@ -4,8 +4,7 @@
  *
  * Usage:
  *   npm run add-studio -- --name "Ink & Iron Tattoo" --slug ink-and-iron \
- *     --logo https://example.com/logo.png --accent "#e8c547" \
- *     --booking https://example.com/book
+ *     --logo https://example.com/logo.png --accent "#e8c547"
  *
  * A bot can run this, commit data/studios.json, and Vercel will deploy
  * https://<host>/s/<slug>.
@@ -49,7 +48,6 @@ function printHelp() {
 
 Required:
   --name              Studio display name
-  --booking           Booking / contact URL (https:// or mailto:)
 
 Optional:
   --slug              URL slug (default: slugified name)
@@ -58,6 +56,8 @@ Optional:
   --accent-foreground Hex text color on accent (default: #000000)
   --highlight         Hex highlight (default: accent)
   --name-short        Short name for tight headers
+  --booking           Booking URL override (https://, mailto:, or wa.me).
+                      Default: Samir's WhatsApp with a prefilled message.
   --booking-label     CTA label (default: Book a consultation)
   --trial-days        Demo length (default: 14)
   --force             Overwrite an existing slug
@@ -67,7 +67,7 @@ New studios are always plan "demo". After bank transfer, activate with:
 
 Example:
   npm run add-studio -- --name "Ink & Iron Tattoo" --slug ink-and-iron \\
-    --accent "#e8c547" --booking "https://example.com/book"
+    --accent "#e8c547"
 `);
 }
 
@@ -87,7 +87,6 @@ const bookingLink =
   typeof args.booking === "string" ? args.booking.trim() : "";
 
 if (!name) fail("Missing --name. See --help.");
-if (!bookingLink) fail("Missing --booking. See --help.");
 
 const slug =
   (typeof args.slug === "string" && args.slug.trim()) || slugify(name);
@@ -119,7 +118,6 @@ const entry = {
       : typeof args.accent === "string"
         ? args.accent.trim()
         : "#ffffff",
-  bookingLink,
   bookingLabel:
     typeof args["booking-label"] === "string" && args["booking-label"].trim()
       ? args["booking-label"].trim()
@@ -127,6 +125,10 @@ const entry = {
   plan,
   createdAt: now.toISOString(),
 };
+
+if (bookingLink) {
+  entry.bookingLink = bookingLink;
+}
 
 if (plan === "demo") {
   entry.trialEndsAt = trialEndsAt.toISOString();

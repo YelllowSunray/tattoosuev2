@@ -15,9 +15,9 @@ const sizeStyles = {
     name: "text-lg",
   },
   lg: {
-    logo: "h-11 w-11 sm:h-12 sm:w-12",
-    mark: "h-11 w-11 sm:h-12 sm:w-12 text-xs sm:text-sm",
-    name: "text-lg sm:text-2xl",
+    logo: "h-8 w-8 lg:h-11 lg:w-11",
+    mark: "h-8 w-8 lg:h-11 lg:w-11 text-[10px] lg:text-xs",
+    name: "text-[15px] lg:text-2xl",
   },
 } as const;
 
@@ -46,7 +46,7 @@ export default function StudioWordmark({
   const styles = sizeStyles[size];
 
   return (
-    <span className={`flex items-center gap-3 sm:gap-4 min-w-0 ${className}`}>
+    <span className={`flex items-center gap-2 sm:gap-4 min-w-0 ${className}`}>
       {showLogo ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
