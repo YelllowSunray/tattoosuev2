@@ -59,9 +59,11 @@ Optional:
   --highlight         Hex highlight (default: accent)
   --name-short        Short name for tight headers
   --booking-label     CTA label (default: Book a consultation)
-  --plan              demo | paid (default: demo)
   --trial-days        Demo length (default: 14)
   --force             Overwrite an existing slug
+
+New studios are always plan "demo". After bank transfer, activate with:
+  npm run activate-studio -- <slug>
 
 Example:
   npm run add-studio -- --name "Ink & Iron Tattoo" --slug ink-and-iron \\
@@ -93,7 +95,7 @@ if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
   fail(`Invalid slug "${slug}". Use lowercase letters, numbers, and hyphens.`);
 }
 
-const plan = args.plan === "paid" ? "paid" : "demo";
+const plan = "demo";
 const now = new Date();
 const trialDays = Number.parseInt(String(args["trial-days"] || "14"), 10);
 const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);

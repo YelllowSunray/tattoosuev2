@@ -28,7 +28,7 @@ export async function generateMetadata({
   }
   return {
     title: `${studio.name} gallery preview`,
-    description: `Preview the tattoo style gallery branded for ${studio.name}.`,
+    description: `Style explorer branded for ${studio.name}. Sample and combine tattoo styles, then book a consultation.`,
     robots: { index: false, follow: false },
   };
 }
@@ -56,6 +56,7 @@ export default async function StudioPreviewPage({
       homeHref={`/s/${studio.slug}`}
       showGeneratorLink={false}
       showDemoBanner={isDemoPreview(studio)}
+      explorerCopy
     />
   );
 }

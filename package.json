@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "add-studio": "node scripts/add-studio.mjs"
+    "add-studio": "node scripts/add-studio.mjs",
+    "activate-studio": "node scripts/activate-studio.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.33.0",

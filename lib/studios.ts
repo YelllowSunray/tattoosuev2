@@ -1,9 +1,10 @@
-import type { StudioArtist, StudioConfig, StudioFeaturedWork } from "@/lib/studio-config";
+import type { StudioConfig } from "@/lib/studio-config";
 import { studioConfig } from "@/lib/studio-config";
 import studiosJson from "@/data/studios.json";
 
 export type StudioPlan = "demo" | "paid";
 
+/** Per-studio personalization is branding only — never a studio portfolio. */
 export interface StudioRecord {
   slug: string;
   name: string;
@@ -15,11 +16,10 @@ export interface StudioRecord {
   bookingLink: string;
   bookingLabel?: string;
   contactEmail?: string;
+  /** demo = 14-day preview with banner; paid = lifetime, set by scripts/activate-studio. */
   plan: StudioPlan;
   createdAt: string;
   trialEndsAt?: string;
-  artists?: StudioArtist[];
-  featuredWork?: StudioFeaturedWork[];
 }
 
 export const SAMIRDEV = {
@@ -65,9 +65,9 @@ export function studioRecordToConfig(studio: StudioRecord): StudioConfig {
       accentForeground: studio.accentForeground || "#000000",
       highlight: studio.highlight || accent,
     },
-    description: `Explore tattoo styles at ${studio.name}. Find a style you love, then book a consultation.`,
-    artists: studio.artists ?? [],
-    featuredWork: studio.featuredWork ?? [],
+    description: `Explore tattoo styles at ${studio.name}. Sample and combine styles, then book a consultation.`,
+    artists: [],
+    featuredWork: [],
   };
 }
 

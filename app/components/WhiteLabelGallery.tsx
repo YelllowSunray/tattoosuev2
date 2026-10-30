@@ -4,7 +4,6 @@ import type { CSSProperties } from "react";
 import GardenOfTattooStyles from "./GardenOfTattooStyles";
 import GalleryHeader from "./GalleryHeader";
 import BookConsultationButton from "./BookConsultationButton";
-import ArtistsShowcase from "./ArtistsShowcase";
 import SiteFooter from "./SiteFooter";
 import PreviewBanner from "./PreviewBanner";
 import { StudioProvider } from "@/lib/studio-context";
@@ -15,11 +14,13 @@ export default function WhiteLabelGallery({
   homeHref = "/",
   showGeneratorLink = false,
   showDemoBanner = false,
+  explorerCopy = false,
 }: {
   studio: StudioConfig;
   homeHref?: string;
   showGeneratorLink?: boolean;
   showDemoBanner?: boolean;
+  explorerCopy?: boolean;
 }) {
   const stickyTopClass = showDemoBanner ? "top-24" : "top-16";
   const sidebarHeightClass = showDemoBanner
@@ -51,15 +52,14 @@ export default function WhiteLabelGallery({
                 Garden of Tattoo Styles
               </h1>
               <p className="text-white/60 text-sm sm:text-base font-light">
-                Explore 100&apos;s of styles — find the one you love, then book a
-                consultation with the studio.
+                {explorerCopy
+                  ? "A style explorer for clients — sample and combine styles, then book a consultation with the studio."
+                  : "Explore 100's of styles — find the one you love, then book a consultation with the studio."}
               </p>
             </div>
             <BookConsultationButton size="lg" fullWidth />
           </div>
         </section>
-
-        <ArtistsShowcase />
 
         <main>
           <GardenOfTattooStyles

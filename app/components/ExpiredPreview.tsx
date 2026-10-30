@@ -12,8 +12,9 @@ export default function ExpiredPreview({ studio }: { studio: StudioRecord }) {
           This preview has expired
         </h1>
         <p className="text-white/55 text-sm sm:text-base font-light leading-relaxed">
-          The 14-day demo for this gallery has ended. {SAMIRDEV.contactLabel}{" "}
-          and we&apos;ll turn it into a live, branded site for the studio.
+          The 14-day demo for this style explorer has ended. Studios pay by
+          bank transfer; {SAMIRDEV.label} then activates the gallery (lifetime,
+          no preview banner).
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <a
