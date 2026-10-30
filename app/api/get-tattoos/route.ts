@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllTattooImages, TattooImageFilters } from "@/lib/firebase-utils";
+import {
+  catalogDeniedResponse,
+  hasTattooCatalogAccess,
+} from "@/lib/catalog-access";
 
 export async function GET(req: NextRequest) {
+  if (!hasTattooCatalogAccess(req)) {
+    return catalogDeniedResponse();
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     
@@ -66,10 +74,4 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
-
-
-
-
-
 

@@ -5,6 +5,7 @@ import TattooFilter from "./TattooFilter";
 import TattooGallery from "./TattooGallery";
 import { filterTattoos, TattooImage } from "@/lib/firebase-utils";
 import { getStyleById, getCategoryById } from "@/lib/tattoo-categories";
+import { useStudio } from "@/lib/studio-context";
 
 type PriceEntry = { price: number; duration: number };
 
@@ -91,6 +92,8 @@ export default function GardenOfTattooStyles({
   const [visibleCount, setVisibleCount] = useState(200);
   const [showPriceDuration, setShowPriceDuration] = useState(mode !== "studio");
   const isStudio = mode === "studio";
+  const studio = useStudio();
+  const studioSlug = studio.slug ?? "";
 
   useEffect(() => {
     if (showFiltersMobile) {
@@ -125,6 +128,7 @@ export default function GardenOfTattooStyles({
       try {
         const params = new URLSearchParams();
         if (bodyPart) params.set("bodyPart", bodyPart);
+        if (studioSlug) params.set("studio", studioSlug);
 
         const tattoosResponse = await fetch(`/api/get-tattoos?${params.toString()}`);
         if (!tattoosResponse.ok) {
@@ -155,7 +159,7 @@ export default function GardenOfTattooStyles({
         }
       }
     },
-    []
+    [studioSlug]
   );
 
   const prefetchPlacements = useCallback(
@@ -204,8 +208,11 @@ export default function GardenOfTattooStyles({
       try {
         setInitialLoading(true);
 
+        const bodyPartsUrl = studioSlug
+          ? `/api/get-body-parts?studio=${encodeURIComponent(studioSlug)}`
+          : "/api/get-body-parts";
         const [bodyPartsResponse] = await Promise.all([
-          fetch("/api/get-body-parts"),
+          fetch(bodyPartsUrl),
           fetchPlacementImages(
             mode === "studio" ? STUDIO_DEFAULT_PLACEMENT : undefined
           ),
@@ -226,7 +233,7 @@ export default function GardenOfTattooStyles({
     }
 
     loadInitialData();
-  }, [fetchPlacementImages, mode]);
+  }, [fetchPlacementImages, mode, studioSlug]);
 
   useEffect(() => {
     if (initialLoading) return;

@@ -1,13 +1,5 @@
-"use client";
-
-import WhiteLabelGallery from "../components/WhiteLabelGallery";
-import { isAiGeneratorEnabled, studioConfig } from "@/lib/studio-config";
+import StudioSalesLanding from "../components/StudioSalesLanding";
 
 export default function GalleryPage() {
-  return (
-    <WhiteLabelGallery
-      studio={studioConfig}
-      showGeneratorLink={isAiGeneratorEnabled()}
-    />
-  );
+  return <StudioSalesLanding />;
 }

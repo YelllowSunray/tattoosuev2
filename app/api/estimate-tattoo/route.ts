@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllTattooImages, TattooImage } from "@/lib/firebase-utils";
+import {
+  catalogDeniedResponse,
+  hasTattooCatalogAccess,
+} from "@/lib/catalog-access";
 import { getAdminFirestore } from "@/lib/firebase-admin";
 import { db } from "@/lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
@@ -213,6 +217,10 @@ async function getEstimateFromFirestore(fileName: string): Promise<any | null> {
 }
 
 export async function POST(req: NextRequest) {
+  if (!hasTattooCatalogAccess(req)) {
+    return catalogDeniedResponse();
+  }
+
   try {
     const { fileName, processAll, forceReestimate, listOnly, startFrom } = await req.json();
 

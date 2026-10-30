@@ -34,6 +34,8 @@ export interface StudioFeaturedWork {
 }
 
 export interface StudioConfig {
+  /** Set on /s/<slug> previews so the catalogue API can authorize fetches. */
+  slug?: string;
   studioName: string;
   studioNameShort: string;
   /** Homepage hero line (AI product). Unused when the generator is hidden. */

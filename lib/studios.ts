@@ -38,6 +38,9 @@ export const SAMIRDEV = {
 /** Default consultation number when a studio has not set its own booking URL. */
 export const DEFAULT_WHATSAPP_NUMBER = "31687343078";
 
+/** Sales contact for studios who want a branded explorer. */
+export const SALES_WHATSAPP_HREF = `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}`;
+
 export function whatsappBookingLink(studioName: string): string {
   const text = `Hi! I'd like to book a consultation at ${studioName}.`;
   return `https://wa.me/${DEFAULT_WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
@@ -66,6 +69,7 @@ export function studioRecordToConfig(studio: StudioRecord): StudioConfig {
   const bookingLink = studio.bookingLink?.trim() || whatsappBookingLink(studio.name);
   return {
     ...studioConfig,
+    slug: studio.slug,
     studioName: studio.name,
     studioNameShort: studio.nameShort || studio.name,
     bookingLink,

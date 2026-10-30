@@ -1,17 +1,13 @@
 import type { MetadataRoute } from "next";
-import { isAiGeneratorEnabled, studioConfig } from "@/lib/studio-config";
+import { studioConfig } from "@/lib/studio-config";
 
 export default function manifest(): MetadataRoute.Manifest {
-  const generatorEnabled = isAiGeneratorEnabled();
   return {
-    name: generatorEnabled
-      ? `${studioConfig.studioNameShort} AI Tattoo Generator`
-      : studioConfig.studioName,
-    short_name: studioConfig.studioNameShort,
-    description: generatorEnabled
-      ? "AI tattoo design generator. Create custom tattoo designs instantly, visualize on your body, and explore 100+ styles."
-      : studioConfig.description,
-    start_url: generatorEnabled ? "/" : "/gallery",
+    name: "Style explorer for tattoo studios",
+    short_name: "SamirDev",
+    description:
+      "Style explorer for tattoo studios, branded for your studio.",
+    start_url: "/",
     display: "standalone",
     background_color: "#000000",
     theme_color: studioConfig.theme.accent,

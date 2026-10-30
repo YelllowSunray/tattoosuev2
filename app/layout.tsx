@@ -6,7 +6,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/lib/auth-context";
 import {
   studioConfig,
-  isAiGeneratorEnabled,
   getStudioCssVars,
 } from "@/lib/studio-config";
 import "./globals.css";
@@ -23,14 +22,10 @@ const geistMono = Geist_Mono({
 
 const siteUrl = studioConfig.siteUrl;
 const siteName = studioConfig.studioName;
-const generatorEnabled = isAiGeneratorEnabled();
 
-const defaultTitle = generatorEnabled
-  ? `${siteName} - AI Tattoo Generator | Create Custom Designs`
-  : `${siteName} | Tattoo Gallery`;
-const defaultDescription = generatorEnabled
-  ? "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator at just $0.20 per image."
-  : studioConfig.description;
+const defaultTitle = "Style explorer for tattoo studios";
+const defaultDescription =
+  "Style explorer for tattoo studios, branded for your studio.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -39,25 +34,13 @@ export const metadata: Metadata = {
     template: `%s | ${siteName}`,
   },
   description: defaultDescription,
-  keywords: generatorEnabled
-    ? [
-        "AI tattoo generator",
-        "AI tattoo design",
-        "custom tattoo generator",
-        "tattoo design generator",
-        "AI generated tattoo",
-        "create tattoo design",
-        "tattoo visualization",
-        "body tattoo preview",
-        "tattoo from photo",
-        "mandala tattoo generator",
-        "realism tattoo AI",
-        "geometric tattoo design",
-        "tattoo styles",
-        "cheap AI tattoo",
-        "tattoo design app",
-      ]
-    : studioConfig.keywords,
+  keywords: [
+    "tattoo studio",
+    "style explorer",
+    "tattoo gallery",
+    "white label tattoo",
+    ...studioConfig.keywords,
+  ],
   authors: [{ name: siteName }],
   creator: siteName,
   publisher: siteName,
@@ -75,26 +58,20 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: siteName,
     title: defaultTitle,
-    description: generatorEnabled
-      ? "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator."
-      : studioConfig.description,
+    description: defaultDescription,
     images: [
       {
         url: `${siteUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: generatorEnabled
-          ? `${siteName} - AI Tattoo Design Generator`
-          : `${siteName} tattoo gallery`,
+        alt: "Style explorer for tattoo studios",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
-    description: generatorEnabled
-      ? "Generate custom AI tattoo designs instantly. Visualize on your body, create from photos, 100+ styles. Most affordable at $0.20/image."
-      : studioConfig.description,
+    description: defaultDescription,
     images: [`${siteUrl}/og-image.jpg`],
   },
   robots: {
