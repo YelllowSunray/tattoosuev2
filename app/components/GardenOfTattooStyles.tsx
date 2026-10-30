@@ -63,6 +63,8 @@ function galleryGridClass(studio: boolean) {
     : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4";
 }
 
+const STUDIO_DEFAULT_PLACEMENT = "chest";
+
 export default function GardenOfTattooStyles({
   headerId = "gallery",
   showHeader = true,
@@ -73,7 +75,9 @@ export default function GardenOfTattooStyles({
   const [bodyParts, setBodyParts] = useState<string[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | undefined>();
   const [selectedStyleId, setSelectedStyleId] = useState<number | undefined>();
-  const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>(undefined);
+  const [selectedBodyPart, setSelectedBodyPart] = useState<string | undefined>(
+    mode === "studio" ? STUDIO_DEFAULT_PLACEMENT : undefined
+  );
   const [initialLoading, setInitialLoading] = useState(true);
   const [isPlacementLoading, setIsPlacementLoading] = useState(false);
   const [cacheVersion, setCacheVersion] = useState(0);
@@ -202,7 +206,9 @@ export default function GardenOfTattooStyles({
 
         const [bodyPartsResponse] = await Promise.all([
           fetch("/api/get-body-parts"),
-          fetchPlacementImages(undefined),
+          fetchPlacementImages(
+            mode === "studio" ? STUDIO_DEFAULT_PLACEMENT : undefined
+          ),
         ]);
 
         if (bodyPartsResponse.ok) {
@@ -220,7 +226,7 @@ export default function GardenOfTattooStyles({
     }
 
     loadInitialData();
-  }, [fetchPlacementImages]);
+  }, [fetchPlacementImages, mode]);
 
   useEffect(() => {
     if (initialLoading) return;
