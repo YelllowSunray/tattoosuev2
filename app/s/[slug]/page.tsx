@@ -24,12 +24,39 @@ export async function generateMetadata({
   const { slug } = await params;
   const studio = getStudioBySlug(slug);
   if (!studio) {
-    return { title: "Studio preview" };
+    return {
+      title: { absolute: "Studio preview | Style explorer" },
+    };
   }
+
+  const title = `${studio.name} | Style explorer`;
+  const description = `Style explorer branded for ${studio.name}. Sample and combine tattoo styles, then book a consultation.`;
+
   return {
-    title: `${studio.name} gallery preview`,
-    description: `Style explorer branded for ${studio.name}. Sample and combine tattoo styles, then book a consultation.`,
+    title: { absolute: title },
+    description,
+    authors: [{ name: studio.name }],
+    creator: studio.name,
+    publisher: studio.name,
     robots: { index: false, follow: false },
+    openGraph: {
+      title,
+      description,
+      url: `/s/${slug}`,
+      siteName: studio.name,
+      images: [
+        {
+          url: "/og-image.jpg",
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+    },
+    twitter: {
+      title,
+      description,
+    },
   };
 }
 
