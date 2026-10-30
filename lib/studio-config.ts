@@ -194,11 +194,13 @@ export function isParlorModeEnabled(): boolean {
   return features.enableAiGenerator && features.enableParlorMode;
 }
 
-export function getStudioCssVars(): Record<string, string> {
+export function getStudioCssVars(
+  config: StudioConfig = studioConfig
+): Record<string, string> {
   return {
-    "--studio-accent": studioConfig.theme.accent,
-    "--studio-accent-foreground": studioConfig.theme.accentForeground,
-    "--studio-highlight": studioConfig.theme.highlight,
+    "--studio-accent": config.theme.accent,
+    "--studio-accent-foreground": config.theme.accentForeground,
+    "--studio-highlight": config.theme.highlight,
   };
 }
 

@@ -1,0 +1,89 @@
+"use client";
+
+import type { CSSProperties } from "react";
+import GardenOfTattooStyles from "./GardenOfTattooStyles";
+import GalleryHeader from "./GalleryHeader";
+import BookConsultationButton from "./BookConsultationButton";
+import ArtistsShowcase from "./ArtistsShowcase";
+import SiteFooter from "./SiteFooter";
+import PreviewBanner from "./PreviewBanner";
+import { StudioProvider } from "@/lib/studio-context";
+import { getStudioCssVars, type StudioConfig } from "@/lib/studio-config";
+
+export default function WhiteLabelGallery({
+  studio,
+  homeHref = "/",
+  showGeneratorLink = false,
+  showDemoBanner = false,
+}: {
+  studio: StudioConfig;
+  homeHref?: string;
+  showGeneratorLink?: boolean;
+  showDemoBanner?: boolean;
+}) {
+  const stickyTopClass = showDemoBanner ? "top-24" : "top-16";
+  const sidebarHeightClass = showDemoBanner
+    ? "h-[calc(100vh-6rem)]"
+    : "h-[calc(100vh-4rem)]";
+
+  return (
+    <StudioProvider studio={studio}>
+      <div
+        className="min-h-screen bg-black text-white"
+        style={getStudioCssVars(studio) as CSSProperties}
+      >
+        <div className="sticky top-0 z-50">
+          {showDemoBanner && <PreviewBanner />}
+          <GalleryHeader
+            homeHref={homeHref}
+            showGeneratorLink={showGeneratorLink}
+            sticky={false}
+          />
+        </div>
+
+        <section className="border-b border-white/5 bg-gradient-to-b from-black via-black to-black">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-8 sm:py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+            <div className="max-w-2xl">
+              <p className="text-white/40 text-xs uppercase tracking-[0.2em] mb-2">
+                {studio.studioName}
+              </p>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-light tracking-tight text-white mb-3">
+                Garden of Tattoo Styles
+              </h1>
+              <p className="text-white/60 text-sm sm:text-base font-light">
+                Explore 100&apos;s of styles — find the one you love, then book a
+                consultation with the studio.
+              </p>
+            </div>
+            <BookConsultationButton size="lg" fullWidth />
+          </div>
+        </section>
+
+        <ArtistsShowcase />
+
+        <main>
+          <GardenOfTattooStyles
+            showHeader={false}
+            stickyTopClass={stickyTopClass}
+            sidebarHeightClass={sidebarHeightClass}
+          />
+        </main>
+
+        <section className="border-t border-white/5 py-12">
+          <div className="max-w-3xl mx-auto px-4 text-center space-y-5">
+            <h2 className="text-2xl sm:text-3xl font-light text-white">
+              Ready to get inked?
+            </h2>
+            <p className="text-white/50 text-sm sm:text-base font-light">
+              Bring a style you love — or just an idea — and we&apos;ll shape it
+              into a custom piece.
+            </p>
+            <BookConsultationButton size="lg" />
+          </div>
+        </section>
+
+        <SiteFooter />
+      </div>
+    </StudioProvider>
+  );
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { studioConfig } from "@/lib/studio-config";
+import { useStudio } from "@/lib/studio-context";
 
 type ButtonSize = "sm" | "md" | "lg";
 
@@ -20,11 +20,12 @@ export default function BookConsultationButton({
   className?: string;
   fullWidth?: boolean;
 }) {
-  const href = studioConfig.bookingLink;
+  const studio = useStudio();
+  const href = studio.bookingLink;
   if (!href) return null;
 
   const isInternal = href.startsWith("/");
-  const label = studioConfig.bookingLabel;
+  const label = studio.bookingLabel;
   const classes = [
     "inline-flex items-center justify-center gap-2 font-semibold transition-all duration-300 hover:scale-[1.02] hover:opacity-90",
     sizeClasses[size],

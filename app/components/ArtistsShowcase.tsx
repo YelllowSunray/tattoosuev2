@@ -1,10 +1,13 @@
-import { studioConfig } from "@/lib/studio-config";
+"use client";
+
+import { useStudio } from "@/lib/studio-context";
 
 export default function ArtistsShowcase() {
-  const artists = studioConfig.artists.filter(
+  const studio = useStudio();
+  const artists = studio.artists.filter(
     (artist) => artist.name && (artist.portfolioImages?.length || artist.bio)
   );
-  const featured = studioConfig.featuredWork.filter((item) => item.url);
+  const featured = studio.featuredWork.filter((item) => item.url);
 
   if (artists.length === 0 && featured.length === 0) {
     return null;
