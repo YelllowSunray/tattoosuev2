@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { isAiGeneratorEnabled } from "@/lib/studio-config";
 
 export const metadata: Metadata = {
   title: "Generate Tattoo Design",
@@ -32,6 +34,9 @@ export default function GenerateLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (!isAiGeneratorEnabled()) {
+    redirect("/gallery");
+  }
   return children;
 }
 

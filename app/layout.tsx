@@ -1,8 +1,14 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "@/lib/auth-context";
+import {
+  studioConfig,
+  isAiGeneratorEnabled,
+  getStudioCssVars,
+} from "@/lib/studio-config";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,33 +21,43 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sujathascompass.com';
-const siteName = "Sue's Tattoo Studio";
+const siteUrl = studioConfig.siteUrl;
+const siteName = studioConfig.studioName;
+const generatorEnabled = isAiGeneratorEnabled();
+
+const defaultTitle = generatorEnabled
+  ? `${siteName} - AI Tattoo Generator | Create Custom Designs`
+  : `${siteName} | Tattoo Gallery`;
+const defaultDescription = generatorEnabled
+  ? "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator at just $0.20 per image."
+  : studioConfig.description;
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${siteName} - AI Tattoo Generator | Create Custom Designs`,
+    default: defaultTitle,
     template: `%s | ${siteName}`,
   },
-  description: "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator at just $0.20 per image.",
-  keywords: [
-    "AI tattoo generator",
-    "AI tattoo design",
-    "custom tattoo generator",
-    "tattoo design generator",
-    "AI generated tattoo",
-    "create tattoo design",
-    "tattoo visualization",
-    "body tattoo preview",
-    "tattoo from photo",
-    "mandala tattoo generator",
-    "realism tattoo AI",
-    "geometric tattoo design",
-    "tattoo styles",
-    "cheap AI tattoo",
-    "tattoo design app",
-  ],
+  description: defaultDescription,
+  keywords: generatorEnabled
+    ? [
+        "AI tattoo generator",
+        "AI tattoo design",
+        "custom tattoo generator",
+        "tattoo design generator",
+        "AI generated tattoo",
+        "create tattoo design",
+        "tattoo visualization",
+        "body tattoo preview",
+        "tattoo from photo",
+        "mandala tattoo generator",
+        "realism tattoo AI",
+        "geometric tattoo design",
+        "tattoo styles",
+        "cheap AI tattoo",
+        "tattoo design app",
+      ]
+    : studioConfig.keywords,
   authors: [{ name: siteName }],
   creator: siteName,
   publisher: siteName,
@@ -58,21 +74,27 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: siteName,
-    title: `${siteName} - AI Tattoo Generator | Create Custom Designs`,
-    description: "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator.",
+    title: defaultTitle,
+    description: generatorEnabled
+      ? "Generate custom AI tattoo designs instantly. Visualize tattoos on your body, create designs from photos, and explore 100+ styles. The most affordable AI tattoo generator."
+      : studioConfig.description,
     images: [
       {
         url: `${siteUrl}/og-image.jpg`,
         width: 1200,
         height: 630,
-        alt: `${siteName} - AI Tattoo Design Generator`,
+        alt: generatorEnabled
+          ? `${siteName} - AI Tattoo Design Generator`
+          : `${siteName} tattoo gallery`,
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: `${siteName} - AI Tattoo Generator | Create Custom Designs`,
-    description: "Generate custom AI tattoo designs instantly. Visualize on your body, create from photos, 100+ styles. Most affordable at $0.20/image.",
+    title: defaultTitle,
+    description: generatorEnabled
+      ? "Generate custom AI tattoo designs instantly. Visualize on your body, create from photos, 100+ styles. Most affordable at $0.20/image."
+      : studioConfig.description,
     images: [`${siteUrl}/og-image.jpg`],
   },
   robots: {
@@ -92,9 +114,8 @@ export const metadata: Metadata = {
     // yandex: "your-yandex-verification-code",
     // bing: "your-bing-verification-code",
   },
-  manifest: "/manifest.json",
   other: {
-    "theme-color": "#000000",
+    "theme-color": studioConfig.theme.accent,
   },
 };
 
@@ -104,7 +125,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={getStudioCssVars() as CSSProperties}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
