@@ -83,13 +83,11 @@ export default function StudioSalesLanding() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={card.src}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-80 pointer-events-none select-none"
-                  draggable={false}
+                  alt={`${card.label} tattoo style`}
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/45" />
-                <span className="absolute inset-0 flex items-end p-3">
-                  <span className="text-[11px] tracking-[0.16em] uppercase text-white/70">
+                <span className="absolute inset-x-0 bottom-0 flex items-end p-3 bg-gradient-to-t from-black/70 via-black/25 to-transparent pt-10">
+                  <span className="text-[11px] tracking-[0.16em] uppercase text-white">
                     {card.label}
                   </span>
                 </span>
