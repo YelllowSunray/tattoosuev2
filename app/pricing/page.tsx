@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "../components/AuthButton";
 import MobileNav from "../components/MobileNav";
+import SiteFooter from "../components/SiteFooter";
+import { isAiGeneratorEnabled, studioConfig } from "@/lib/studio-config";
 
 const CREDIT_PACKAGES = [
   { credits: 10, price: 1.00, perImage: 0.20, popular: false },
@@ -56,12 +58,14 @@ export default function PricingPage() {
               >
                 ← Back to gallery
               </Link>
-              <Link
-                href="/generate"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
-              >
-                Generate
-              </Link>
+              {isAiGeneratorEnabled() && (
+                <Link
+                  href="/generate"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-2 rounded-full transition-colors min-h-[44px] flex items-center"
+                >
+                  Generate
+                </Link>
+              )}
             </div>
             <div className="lg:hidden">
               <MobileNav />
@@ -69,7 +73,7 @@ export default function PricingPage() {
           </div>
           <div className="flex-1 flex justify-center">
             <Link href="/" className="text-xl sm:text-2xl font-light tracking-tight">
-              Sue&apos;s Tattoo
+              {studioConfig.studioNameShort}
             </Link>
           </div>
           <div className="flex-1 flex justify-end">
@@ -234,43 +238,27 @@ export default function PricingPage() {
             Start generating custom tattoo designs for just $0.20 per image.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/generate"
-              className="w-full sm:w-auto px-8 py-3 text-sm font-medium text-black bg-white hover:bg-zinc-200 transition-colors"
-            >
-              Start Generating
-            </Link>
-            <Link
-              href="/credits"
-              className="w-full sm:w-auto px-8 py-3 text-sm font-medium text-white border border-white/30 hover:border-white/50 hover:bg-white/5 transition-colors"
-            >
-              Buy Credits
-            </Link>
+            {isAiGeneratorEnabled() && (
+              <Link
+                href="/generate"
+                className="w-full sm:w-auto px-8 py-3 text-sm font-medium text-black bg-white hover:bg-zinc-200 transition-colors"
+              >
+                Start Generating
+              </Link>
+            )}
+            {isAiGeneratorEnabled() && (
+              <Link
+                href="/credits"
+                className="w-full sm:w-auto px-8 py-3 text-sm font-medium text-white border border-white/30 hover:border-white/50 hover:bg-white/5 transition-colors"
+              >
+                Buy Credits
+              </Link>
+            )}
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-white/5 py-8 mt-12">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-white/30 text-xs">
-              © {new Date().getFullYear()} Sue&apos;s Tattoo Studio
-            </p>
-            <div className="flex items-center gap-4">
-              <Link href="/terms" className="text-xs text-white/50 hover:text-white/70">
-                Terms
-              </Link>
-              <Link href="/privacy" className="text-xs text-white/50 hover:text-white/70">
-                Privacy
-              </Link>
-              <Link href="/support" className="text-xs text-white/50 hover:text-white/70">
-                Support
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

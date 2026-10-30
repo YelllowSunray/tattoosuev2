@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import AuthButton from "./AuthButton";
 import CreditsDisplay from "./CreditsDisplay";
+import { isAiGeneratorEnabled, areCreditsEnabled, isParlorModeEnabled } from "@/lib/studio-config";
 
 export default function MobileNav() {
   const [isOpen, setIsOpen] = useState(false);
@@ -123,14 +124,16 @@ export default function MobileNav() {
                       Gallery
                     </Link>
                   )}
-                  <Link
-                    href="/generate"
-                    onClick={() => setIsOpen(false)}
-                    className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
-                  >
-                    {user ? "Generate" : "Generate a AI Custom Tattoo"}
-                  </Link>
-                  {user && userMode === "parlor" && (
+                  {isAiGeneratorEnabled() && (
+                    <Link
+                      href="/generate"
+                      onClick={() => setIsOpen(false)}
+                      className="block px-6 py-4 text-base sm:text-lg text-white hover:text-white bg-white/5 hover:bg-white/10 border border-white/30 rounded-lg transition-colors min-h-[56px] flex items-center font-light"
+                    >
+                      {user ? "Generate" : "Generate a AI Custom Tattoo"}
+                    </Link>
+                  )}
+                  {user && userMode === "parlor" && isParlorModeEnabled() && (
                     <Link
                       href="/customers"
                       onClick={() => setIsOpen(false)}
@@ -139,7 +142,7 @@ export default function MobileNav() {
                       Customers
                     </Link>
                   )}
-                  {user && (
+                  {user && isAiGeneratorEnabled() && (
                     <Link
                       href="/history"
                       onClick={() => setIsOpen(false)}
@@ -148,7 +151,7 @@ export default function MobileNav() {
                       History
                     </Link>
                   )}
-                  {user && (
+                  {user && areCreditsEnabled() && (
                     <div className="space-y-2">
                       <Link
                         href="/credits"
@@ -173,10 +176,11 @@ export default function MobileNav() {
                 </nav>
 
                 {/* Mode Toggle */}
-                <div className="pt-4 border-t border-white/20 space-y-3">
-                  <div className="px-2">
-                    <div className="text-xs text-white/60 mb-2">Mode</div>
-                    <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40 w-fit">
+                {isParlorModeEnabled() && (
+                  <div className="pt-4 border-t border-white/20 space-y-3">
+                    <div className="px-2">
+                      <div className="text-xs text-white/60 mb-2">Mode</div>
+                      <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40 w-fit">
                       <button
                         type="button"
                         onClick={async () => {
@@ -245,7 +249,8 @@ export default function MobileNav() {
                       </button>
                     </div>
                   </div>
-                </div>
+                  </div>
+                )}
 
                 <div className="pt-4 border-t border-white/20 space-y-4">
                   <div className="px-2 flex items-center justify-between gap-2">

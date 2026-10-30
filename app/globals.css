@@ -3,6 +3,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --studio-accent: #ffffff;
+  --studio-accent-foreground: #000000;
+  --studio-highlight: #c084fc;
 }
 
 @theme inline {

@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import Script from "next/script";
 import GardenOfTattooStyles from "./components/GardenOfTattooStyles";
 import AuthButton from "./components/AuthButton";
 import CreditsDisplay from "./components/CreditsDisplay";
 import MobileNav from "./components/MobileNav";
+import SiteFooter from "./components/SiteFooter";
 import { useAuth } from "@/lib/auth-context";
+import { studioConfig, isAiGeneratorEnabled, areCreditsEnabled, isParlorModeEnabled } from "@/lib/studio-config";
 
 export default function Home() {
   const [userMode, setUserMode] = useState("individual");
@@ -70,8 +71,8 @@ export default function Home() {
     return () => observer.disconnect();
   }, []);
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.sujathascompass.com';
-  const siteName = "Sue's Tattoo Studio";
+  const siteUrl = studioConfig.siteUrl;
+  const siteName = studioConfig.studioName;
 
   // Structured data for SEO
   const structuredData = {
@@ -151,7 +152,7 @@ export default function Home() {
           {/* Mobile: Hamburger Menu, Desktop: Navigation Links */}
           <div className="flex items-center justify-start gap-2 relative z-[100] flex-shrink-0">
             <div className="hidden lg:flex gap-2">
-              {user && userMode === "parlor" && (
+              {user && userMode === "parlor" && isParlorModeEnabled() && (
                 <Link
                   href="/customers"
                   className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
@@ -159,13 +160,15 @@ export default function Home() {
                   Customers
                 </Link>
               )}
-              <Link
-                href="/generate"
-                className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
-              >
-                {user ? "Generate" : "Generate a AI Custom Tattoo"}
-              </Link>
-              {user && (
+              {isAiGeneratorEnabled() && (
+                <Link
+                  href="/generate"
+                  className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
+                >
+                  {user ? "Generate" : "Generate a AI Custom Tattoo"}
+                </Link>
+              )}
+              {user && isAiGeneratorEnabled() && (
                 <Link
                   href="/history"
                   className="text-xs sm:text-sm text-white/70 hover:text-white border border-white/30 px-3 py-1.5 rounded-full transition-colors"
@@ -181,7 +184,8 @@ export default function Home() {
           <div className="flex-1 flex justify-end">
             <div className="hidden lg:flex items-center gap-2">
               {/* Mode Toggle */}
-              <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
+              {isParlorModeEnabled() && (
+                <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
                 <button
                   type="button"
                   onClick={async () => {
@@ -249,7 +253,8 @@ export default function Home() {
                   Parlor
                 </button>
               </div>
-              {user && (
+              )}
+              {user && areCreditsEnabled() && (
                 <>
                   <CreditsDisplay />
                   <Link
@@ -264,7 +269,8 @@ export default function Home() {
             </div>
             <div className="lg:hidden flex items-center gap-2">
               {/* Mode Toggle */}
-              <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
+              {isParlorModeEnabled() && (
+                <div className="flex items-center gap-1 border border-white/30 rounded-full p-1 bg-black/40">
                 <button
                   type="button"
                   onClick={async () => {
@@ -332,7 +338,8 @@ export default function Home() {
                   Parlor
                 </button>
               </div>
-              {user && <CreditsDisplay />}
+              )}
+              {user && areCreditsEnabled() && <CreditsDisplay />}
             </div>
           </div>
         </div>
@@ -378,10 +385,10 @@ export default function Home() {
           {/* Main title with gradient accent */}
           <div className="mb-8 sm:mb-10 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight text-white mb-4">
-              Sue&apos;s AI Tattoo
+              {studioConfig.heroTitle}
             </h2>
             <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light tracking-tight gradient-text-animated">
-              Design Generator
+              {studioConfig.heroSubtitle}
             </h2>
           </div>
           
@@ -391,21 +398,39 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-10 animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
-            <Link
-              href="/generate"
-              className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
-              style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                <svg className="w-5 h-5 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Start Creating Now
-                <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </span>
-            </Link>
+            {isAiGeneratorEnabled() ? (
+              <Link
+                href="/generate"
+                className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
+                style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Start Creating Now
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </Link>
+            ) : (
+              <a
+                href={studioConfig.bookingLink}
+                className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
+                style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Book a Consultation
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </a>
+            )}
             <a
               href="#gallery"
               className="group w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-medium text-white glass-card hover:bg-white/10 transition-all duration-500 hover:scale-[1.02] tilt-card"
@@ -474,7 +499,7 @@ export default function Home() {
             <div className="flex items-center justify-center gap-6 sm:gap-12 mb-8">
               <div className="text-center group">
                 <div className="text-4xl sm:text-5xl font-light text-white neon-text transition-all duration-300 group-hover:scale-110">$0.20</div>
-                <div className="text-xs text-purple-400/80 mt-2 font-medium uppercase tracking-wider">Sue&apos;s AI</div>
+                <div className="text-xs text-purple-400/80 mt-2 font-medium uppercase tracking-wider">{studioConfig.aiBrandName}</div>
               </div>
               <div className="relative">
                 <div className="text-white/20 text-3xl font-light">vs</div>
@@ -954,21 +979,39 @@ export default function Home() {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 mb-8">
-            <Link
-              href="/generate"
-              className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
-              style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-3">
-                <svg className="w-5 h-5 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Start Generating Now
-                <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </span>
-            </Link>
+            {isAiGeneratorEnabled() ? (
+              <Link
+                href="/generate"
+                className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
+                style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:rotate-12 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Start Generating Now
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </Link>
+            ) : (
+              <a
+                href={studioConfig.bookingLink}
+                className="group relative w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-semibold text-black bg-white transition-all duration-500 overflow-hidden spotlight ripple-effect hover:scale-[1.02]"
+                style={{ boxShadow: '0 0 40px rgba(255,255,255,0.15), 0 0 80px rgba(255,255,255,0.05)' }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-3">
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:scale-110" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Book a Consultation
+                  <svg className="w-5 h-5 transition-all duration-500 group-hover:translate-x-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                  </svg>
+                </span>
+              </a>
+            )}
             <a
               href="#gallery"
               className="group w-full sm:w-auto px-10 sm:px-12 py-5 text-base sm:text-lg font-medium text-white glass-card hover:bg-white/10 transition-all duration-500 hover:scale-[1.02]"
@@ -993,36 +1036,7 @@ export default function Home() {
 
       <GardenOfTattooStyles />
 
-      {/* Footer */}
-      <footer className="relative mt-24 border-t border-white/5 py-12">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-white/30 text-xs font-light tracking-wide">
-              © {new Date().getFullYear()} Sue's Tattoo Studio
-            </p>
-            <div className="flex items-center gap-4">
-              <Link
-                href="/terms"
-                className="text-xs text-white/50 hover:text-white/70 font-light tracking-wide transition-colors"
-              >
-                Terms
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-xs text-white/50 hover:text-white/70 font-light tracking-wide transition-colors"
-              >
-                Privacy
-              </Link>
-              <Link
-                href="/support"
-                className="text-xs text-white/50 hover:text-white/70 font-light tracking-wide transition-colors"
-              >
-                Contact Support
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
