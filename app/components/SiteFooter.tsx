@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useStudio } from "@/lib/studio-context";
 
-export default function SiteFooter() {
+export default function SiteFooter({ compact = false }: { compact?: boolean }) {
   const studio = useStudio();
   return (
-    <footer className="relative mt-24 border-t border-white/5 py-12">
+    <footer
+      className={`relative border-t border-white/5 ${compact ? "mt-10 py-8" : "mt-24 py-12"}`}
+    >
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-white/30 text-xs font-light tracking-wide">

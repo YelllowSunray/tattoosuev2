@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useStudio } from "@/lib/studio-context";
 
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonSize = "sm" | "md" | "lg" | "header";
 
 const sizeClasses: Record<ButtonSize, string> = {
   sm: "px-4 py-2 text-xs sm:text-sm",
   md: "px-5 py-2.5 text-sm",
   lg: "px-10 sm:px-12 py-5 text-base sm:text-lg",
+  header:
+    "px-3.5 sm:px-5 py-2 sm:py-2.5 text-[11px] sm:text-sm tracking-wide whitespace-nowrap",
 };
 
 export default function BookConsultationButton({
@@ -57,7 +59,9 @@ export default function BookConsultationButton({
         />
       </svg>
       <span className="hidden sm:inline">{label}</span>
-      <span className="sm:hidden">{size === "sm" ? "Book" : label}</span>
+      <span className="sm:hidden">
+        {size === "sm" || size === "header" ? "Book" : label}
+      </span>
     </>
   );
 

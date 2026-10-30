@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import WhiteLabelGallery from "@/app/components/WhiteLabelGallery";
+import StudioPreviewLayout from "@/app/components/StudioPreviewLayout";
 import ExpiredPreview from "@/app/components/ExpiredPreview";
 import {
   getStudioBySlug,
@@ -51,12 +51,10 @@ export default async function StudioPreviewPage({
   const config = studioRecordToConfig(studio);
 
   return (
-    <WhiteLabelGallery
+    <StudioPreviewLayout
       studio={config}
       homeHref={`/s/${studio.slug}`}
-      showGeneratorLink={false}
       showDemoBanner={isDemoPreview(studio)}
-      explorerCopy
     />
   );
 }
