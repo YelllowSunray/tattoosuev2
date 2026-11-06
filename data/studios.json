@@ -140,5 +140,18 @@
     "plan": "demo",
     "createdAt": "2026-10-30T20:00:29.395Z",
     "trialEndsAt": "2026-11-13T20:00:29.395Z"
+  },
+  {
+    "slug": "gold-tattoo",
+    "name": "Gold Tattoo",
+    "nameShort": "Gold Tattoo",
+    "logoUrl": "/studios/gold-tattoo/logo.jpg",
+    "accent": "#C9A227",
+    "accentForeground": "#111111",
+    "highlight": "#C9A227",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-11-06T09:20:35.315Z",
+    "trialEndsAt": "2026-11-20T09:20:35.315Z"
   }
 ]
