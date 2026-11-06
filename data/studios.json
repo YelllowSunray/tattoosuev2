@@ -153,5 +153,18 @@
     "plan": "demo",
     "createdAt": "2026-11-06T09:20:35.315Z",
     "trialEndsAt": "2026-11-20T09:20:35.315Z"
+  },
+  {
+    "slug": "sweet-ink-tattoo-studio",
+    "name": "Sweet Ink Tattoo Studio",
+    "nameShort": "Sweet Ink",
+    "logoUrl": "/studios/sweet-ink-tattoo-studio/logo.jpg",
+    "accent": "#FA0188",
+    "accentForeground": "#ffffff",
+    "highlight": "#FA0188",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-11-06T18:31:17.053Z",
+    "trialEndsAt": "2026-11-20T18:31:17.053Z"
   }
 ]
