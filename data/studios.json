@@ -179,5 +179,18 @@
     "plan": "demo",
     "createdAt": "2026-11-08T15:58:00.000Z",
     "trialEndsAt": "2026-11-22T15:58:00.000Z"
+  },
+  {
+    "slug": "creative-cult",
+    "name": "Creative Cult Tattoo",
+    "nameShort": "Creative Cult",
+    "logoUrl": "/studios/creative-cult/logo.jpg",
+    "accent": "#9D4EDD",
+    "accentForeground": "#ffffff",
+    "highlight": "#9D4EDD",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-11-08T16:08:00.000Z",
+    "trialEndsAt": "2026-11-22T16:08:00.000Z"
   }
 ]
