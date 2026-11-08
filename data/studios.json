@@ -168,6 +168,19 @@
     "trialEndsAt": "2026-11-20T18:31:17.053Z"
   },
   {
+    "slug": "sideways-tattoo",
+    "name": "Sideways Tattoo Leeuwarden",
+    "nameShort": "Sideways",
+    "logoUrl": "/studios/sideways-tattoo/logo.jpg",
+    "accent": "#2A2A2A",
+    "accentForeground": "#ffffff",
+    "highlight": "#2A2A2A",
+    "bookingLabel": "Book a consultation",
+    "plan": "demo",
+    "createdAt": "2026-11-08T15:58:00.000Z",
+    "trialEndsAt": "2026-11-22T15:58:00.000Z"
+  },
+  {
     "slug": "creative-cult",
     "name": "Creative Cult Tattoo",
     "nameShort": "Creative Cult",
