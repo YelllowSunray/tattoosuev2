@@ -280,8 +280,11 @@ export default function GardenOfTattooStyles({
   }, [selectedCategoryId, selectedStyleId, selectedBodyPart]);
 
   const closeMobileFilters = useCallback(() => {
+    setSelectedCategoryId(draftCategoryId);
+    setSelectedStyleId(draftStyleId);
+    setSelectedBodyPart(draftBodyPart);
     setShowFiltersMobile(false);
-  }, []);
+  }, [draftCategoryId, draftStyleId, draftBodyPart]);
 
   const applyMobileFilters = useCallback(() => {
     setSelectedCategoryId(draftCategoryId);
